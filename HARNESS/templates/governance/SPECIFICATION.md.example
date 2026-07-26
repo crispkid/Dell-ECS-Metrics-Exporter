@@ -1,0 +1,11 @@
+# Specification
+
+## CHG-001 Initial governed change
+
+### Requirement IDs
+
+- REQ-001: `<observable requirement>`
+
+### Acceptance Criteria
+
+- Given `<precondition>`, when `<action>`, then `<observable result>`.

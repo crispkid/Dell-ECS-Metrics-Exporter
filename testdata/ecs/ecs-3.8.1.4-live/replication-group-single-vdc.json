@@ -1,0 +1,22 @@
+{
+  "_links": {
+    "self": {
+      "href": "/dashboard/replicationgroups/redacted"
+    },
+    "datatables": {
+      "href": "/dashboard/replicationgroups/redacted/datatables"
+    },
+    "rglinks": {
+      "href": "/dashboard/replicationgroups/redacted/rglinks"
+    }
+  },
+  "apiChange": "1",
+  "numZones": "1",
+  "replicationIngressTrafficCurrent": [],
+  "name": "redacted-rg",
+  "chunksPendingXorTotalSize": "0",
+  "chunksRepoPendingReplicationTotalSize": "0",
+  "id": "Replication_Group:urn:storageos:ReplicationGroupInfo:11111111-1111-4111-8111-111111111111:global",
+  "replicationEgressTrafficCurrent": [],
+  "chunksJournalPendingReplicationTotalSize": "0"
+}

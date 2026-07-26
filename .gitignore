@@ -1,0 +1,93 @@
+# Build and test output
+/bin/
+/coverage/
+/dist/
+/test-results/
+/.tmp/
+/tmp/
+*.test
+*.out
+*.prof
+*.coverprofile
+coverage.out
+*.log
+*.pid
+*.sock
+
+# Local runtime configuration and secrets
+/config.yaml
+/config.*.yaml
+!/config.example.yaml
+/values*.yaml
+!/values.example.yaml
+/.env
+/.env.*
+!/.env.example
+/.envrc
+/.direnv/
+/.local/
+/.local-secrets/
+/certs/
+/secrets/
+
+# Local Go workspace and caches
+/go.work
+/go.work.sum
+/.cache/
+/.gocache/
+/.gomodcache/
+/.scanner-cache/
+/.osv-scanner/
+
+# Editor and IDE state
+/.idea/
+/.vscode/
+*.swp
+*.swo
+*~
+
+# Operating-system metadata
+.DS_Store
+._*
+Thumbs.db
+
+# Helm packaging output
+/charts/*.tgz
+/charts/**/*.tgz
+
+# Local container and Kubernetes overrides
+/docker-compose.override.yml
+/compose.override.yaml
+/kubeconfig
+/kubeconfig.*
+/.govc.env
+/.ssh/
+/known_hosts.local
+
+# Local ECS CE / virtual-appliance downloads and hypervisor state
+/*.ova
+/*.ovf
+/*.mf
+/*.vmdk
+/*.vhd
+/*.vhdx
+/*.qcow2
+/*.vdi
+/*.vmx
+/*.nvram
+/*.vmem
+/*.vmss
+/*.vmsd
+/*.vswp
+/*.iso
+/*.part
+/*.aria2
+/.downloads/
+/downloads/
+/vm-images/
+
+# Temporary files
+*.tmp
+*.temp
+*.bak
+*.orig

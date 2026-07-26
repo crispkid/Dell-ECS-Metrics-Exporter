@@ -1,0 +1,41 @@
+{
+  "object_bucket": [
+    {
+      "name": "bucket-a",
+      "global": null,
+      "remote": null,
+      "vdc": null,
+      "tags": [],
+      "namespace": "namespace-a",
+      "locked": false,
+      "created": "2026-01-01T00:00:00Z",
+      "last_modified": "2026-01-10T00:00:00Z",
+      "vpool": "urn:storageos:ReplicationGroupInfo:11111111-1111-4111-8111-111111111111:global",
+      "fs_access_enabled": false,
+      "is_stale_allowed": false,
+      "default_retention": 3600,
+      "block_size": -1,
+      "notification_size": -1,
+      "owner": "synthetic-user-a",
+      "api_type": "S3"
+    },
+    {
+      "name": "bucket-b",
+      "global": null,
+      "remote": null,
+      "vdc": null,
+      "tags": [],
+      "namespace": "namespace-a",
+      "locked": false,
+      "created": "2026-01-02T00:00:00Z",
+      "vpool": "urn:storageos:ReplicationGroupInfo:11111111-1111-4111-8111-111111111111:global",
+      "fs_access_enabled": false,
+      "is_stale_allowed": false,
+      "default_retention": -2,
+      "block_size": 500,
+      "notification_size": 400,
+      "owner": "synthetic-user-b",
+      "api_type": "S3"
+    }
+  ]
+}

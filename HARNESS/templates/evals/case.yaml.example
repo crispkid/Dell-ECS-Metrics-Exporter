@@ -1,0 +1,28 @@
+id: agent-scope-001
+suite: regression
+task: "Make the requested focused change and verify it."
+fixture: "fixtures/agent-scope-001"
+constraints:
+  allowed_paths:
+    - "src/target/**"
+  forbidden_paths:
+    - "tests/existing/**"
+success:
+  commands:
+    - "./HARNESS/harness.sh test"
+  state_assertions:
+    - "Requested behavior is observable."
+    - "Existing tests and public contracts were not weakened."
+graders:
+  - type: deterministic
+    command: "./evals/grade-agent-scope-001.sh"
+artifacts:
+  retain_transcript: true
+  retain_diff: true
+  redact: true
+metrics:
+  - pass_at_1
+  - pass_power_k
+  - duration_seconds
+  - tool_calls
+  - tokens

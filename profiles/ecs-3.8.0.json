@@ -1,0 +1,91 @@
+{
+  "schema_version": "1.0",
+  "profile_id": "ecs-3.8.0",
+  "version": {
+    "min_inclusive": "3.8.0.0",
+    "max_exclusive": "3.8.1.0",
+    "parser": "dell-four-part-with-optional-build-suffix",
+    "documented_releases": [
+      "3.8.0.0",
+      "3.8.0.1",
+      "3.8.0.2",
+      "3.8.0.3",
+      "3.8.0.4",
+      "3.8.0.5",
+      "3.8.0.6"
+    ],
+    "tested_builds": []
+  },
+  "selection": {
+    "logical_api": "version-discovery",
+    "method": "GET",
+    "path": "/vdc/nodes",
+    "version_field": "node[].version",
+    "mixed_version_policy": "intersection-only-no-interval-derived-rates",
+    "unknown_version_policy": "reject"
+  },
+  "transport": {
+    "scheme": "https",
+    "management_port": 4443,
+    "login_path": "/login",
+    "token_header": "X-SDS-AUTH-TOKEN",
+    "whoami_path": "/user/whoami",
+    "logout_path": "/logout",
+    "flux_query_path": "/flux/api/external/v2/query",
+    "host_header_policy": "accepted-server-names-required-for-proxy"
+  },
+  "capabilities": {
+    "authentication": "native",
+    "version_discovery": "native",
+    "cluster_health": "derived",
+    "cluster_capacity": "native",
+    "node_inventory": "native",
+    "node_health": "native",
+    "node_service_process": "conditional",
+    "node_cpu_memory": "native",
+    "node_disk_capacity": "conditional",
+    "node_network_counters": "native",
+    "namespace_inventory": "native",
+    "namespace_capacity": "native",
+    "namespace_quota": "native",
+    "namespace_performance": "conditional",
+    "bucket_inventory": "native",
+    "bucket_capacity": "native",
+    "bucket_quota": "native",
+    "bucket_performance": "unavailable",
+    "vdc_performance": "conditional",
+    "flux_latest_snapshot": "native",
+    "flux_interval_rates": "unavailable",
+    "replication_status": "native",
+    "replication_lag": "derived",
+    "recovery_progress": "conditional"
+  },
+  "known_issues": [
+    {
+      "id": "DELL-KB-000211906",
+      "effect": "Dell reports incorrect Flux time-range behavior in ECS 3.8.0; returned values can represent cumulative totals rather than the requested range.",
+      "mitigation": "Only consume last() snapshots and monotonic counters. Disable Exporter-derived interval rates for this Profile."
+    },
+    {
+      "id": "DELL-KB-000205031",
+      "effect": "Management API requests through a proxy or load balancer can return HTTP 403 when Host is absent from accepted server names.",
+      "mitigation": "Keep configured URL hostname, TLS SNI and HTTP Host consistent; document accepted server names as a deployment prerequisite."
+    },
+    {
+      "id": "ECS380-REST-REFERENCE-PENDING",
+      "effect": "The official REST API ZIP is listed by Dell but requires an authenticated support session and has not been reviewed in this repository.",
+      "mitigation": "Treat management mappings inherited from 3.6 as candidates and block sandbox certification until the 3.8.0 ZIP and live responses are compared."
+    }
+  ],
+  "evidence": {
+    "status": "documentation-partial",
+    "official_sources": [
+      "https://www.dell.com/support/kbdoc/en-us/000205234/ecs-3-8-product-documentation-index-info-hub",
+      "https://www.dell.com/support/kbdoc/en-us/000211906/ecs-different-values-from-flux-api-since-upgrading-to-3-7-3-8",
+      "https://www.dell.com/support/kbdoc/en-us/000205031/ecs-how-to-perform-host-header-injection-for-3-8-x"
+    ],
+    "api_reference_access": "listed-by-dell-login-required",
+    "fixture_classification": "synthetic-document-derived",
+    "sandbox_certified": false
+  }
+}

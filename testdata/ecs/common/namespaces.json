@@ -1,0 +1,30 @@
+{
+  "namespace": [
+    {
+      "name": "namespace-a",
+      "id": "namespace-a",
+      "owner": "synthetic-owner",
+      "audit_enabled": true,
+      "link": {
+        "rel": "self",
+        "href": "/object/namespaces/namespace/namespace-a"
+      },
+      "inactive": false,
+      "global": null,
+      "remote": null,
+      "vdc": null,
+      "default_data_services_vpool": "urn:storageos:ReplicationGroupInfo:11111111-1111-4111-8111-111111111111:global",
+      "allowed_vpools_list": [
+        "urn:storageos:ReplicationGroupInfo:11111111-1111-4111-8111-111111111111:global"
+      ],
+      "disallowed_vpools_list": [],
+      "user_mapping": [],
+      "is_encryption_enabled": "false",
+      "default_bucket_block_size": -1,
+      "is_stale_allowed": false,
+      "is_compliance_enabled": false,
+      "blockSize": -1,
+      "notificationSize": -1
+    }
+  ]
+}

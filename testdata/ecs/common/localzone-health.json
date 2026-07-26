@@ -1,0 +1,21 @@
+{
+  "_links": {
+    "self": {
+      "href": "/dashboard/zones/localzone"
+    },
+    "nodes": {
+      "href": "/dashboard/zones/localzone/nodes"
+    }
+  },
+  "apiChange": "1",
+  "name": "vdc-a",
+  "id": "localzone",
+  "numNodes": "4",
+  "numGoodNodes": "4",
+  "numBadNodes": "0",
+  "numMaintenanceNodes": "0",
+  "numDisks": "32",
+  "numGoodDisks": "32",
+  "numBadDisks": "0",
+  "numMaintenanceDisks": "0"
+}

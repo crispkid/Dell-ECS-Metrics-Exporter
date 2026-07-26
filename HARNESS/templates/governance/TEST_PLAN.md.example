@@ -1,0 +1,9 @@
+# Test Plan
+
+## CHG-001 Test Design
+
+- Requirement: REQ-001
+- Test levels: `<unit/integration/e2e>`
+- Failure and boundary cases: `<cases>`
+- Coverage threshold: `80%`
+- Harness commands: `<commands>`

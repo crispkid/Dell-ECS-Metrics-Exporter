@@ -1,0 +1,6 @@
+{
+  "cluster_capacity": {
+    "totalFree_gb": "200",
+    "totalProvisioned_gb": "750"
+  }
+}

@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0",
+  "profile_id": "ecs-3.6",
+  "inherits": "../common/manifest.json",
+  "classification": "synthetic-document-derived",
+  "sandbox_evidence": false,
+  "profile_expectations": {
+    "selected_for_version": "3.6.2.6",
+    "flux_interval_rates_enabled_after_sandbox": true,
+    "host_header_policy": "legacy"
+  },
+  "fixtures": [
+    {
+      "file": "nodes.json",
+      "mapping_id": "MAP-VERSION-001",
+      "scenario": "uniform ECS 3.6 node versions",
+      "evidence": "synthetic-document-derived",
+      "expected": {
+        "profile_id": "ecs-3.6",
+        "mixed_version": false
+      }
+    },
+    {
+      "file": "flux-interval-valid.json",
+      "mapping_id": "MAP-VDC-PERFORMANCE-001",
+      "scenario": "two in-window VDC transaction rate samples",
+      "evidence": "synthetic-document-derived",
+      "expected": {
+        "rows_accepted": 2,
+        "rows_rejected": 0
+      }
+    }
+  ]
+}

@@ -1,0 +1,7 @@
+{
+  "type": "https://example.invalid/problems/host-not-accepted",
+  "title": "ECS management host is not accepted",
+  "status": 403,
+  "detail": "Configure the ECS accepted server names for the logical target host.",
+  "code": "host_not_accepted"
+}

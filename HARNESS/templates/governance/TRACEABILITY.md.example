@@ -1,0 +1,5 @@
+# Traceability
+
+| Requirement ID | Change ID | Specification section | Implementation area | Tests | Harness command | Status |
+|---|---|---|---|---|---|---|
+| REQ-001 | CHG-001 | Initial governed change | `<path>` | `<test>` | `<command>` | Planned |

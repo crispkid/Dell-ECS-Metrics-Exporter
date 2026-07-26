@@ -1,0 +1,7 @@
+# Specification Changelog
+
+Active Change: CHG-001
+
+| Date | Change ID | Spec section | Reason | Compatibility/migration | Test impact | Approver |
+|---|---|---|---|---|---|---|
+| 2026-01-02 | CHG-001 | Initial governed change | `<reason>` | `<impact>` | `<tests>` | Pending |

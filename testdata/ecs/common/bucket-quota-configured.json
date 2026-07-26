@@ -1,0 +1,8 @@
+{
+  "bucket_quota_details": {
+    "blockSize": "500",
+    "bucketname": "bucket-b",
+    "namespace": "namespace-a",
+    "notificationSize": 400
+  }
+}

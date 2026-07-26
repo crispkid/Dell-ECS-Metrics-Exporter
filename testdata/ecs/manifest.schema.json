@@ -1,0 +1,101 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/dell-ecs-metrics-exporter/fixture-manifest.schema.json",
+  "title": "Dell ECS fixture manifest",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "profile_id",
+    "classification",
+    "sandbox_evidence",
+    "fixtures"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "profile_id": {
+      "type": "string",
+      "minLength": 1
+    },
+    "inherits": {
+      "type": "string",
+      "minLength": 1
+    },
+    "classification": {
+      "enum": [
+        "synthetic-document-derived",
+        "redacted-sandbox-derived"
+      ]
+    },
+    "sandbox_evidence": {
+      "type": "boolean"
+    },
+    "profile_expectations": {
+      "type": "object"
+    },
+    "fixtures": {
+      "type": "array",
+      "minItems": 1,
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "file",
+          "mapping_id",
+          "scenario",
+          "evidence"
+        ],
+        "properties": {
+          "file": {
+            "type": "string",
+            "pattern": "^[a-z0-9][a-z0-9._/-]*\\.json$"
+          },
+          "mapping_id": {
+            "type": "string",
+            "pattern": "^MAP-[A-Z0-9-]+$"
+          },
+          "scenario": {
+            "type": "string",
+            "minLength": 1
+          },
+          "evidence": {
+            "enum": [
+              "synthetic-document-derived",
+              "redacted-sandbox-derived"
+            ]
+          },
+          "expected": {
+            "type": "object"
+          }
+        }
+      }
+    }
+  },
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "classification": {
+            "const": "synthetic-document-derived"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "sandbox_evidence": {
+            "const": false
+          }
+        }
+      },
+      "else": {
+        "properties": {
+          "sandbox_evidence": {
+            "const": true
+          }
+        }
+      }
+    }
+  ]
+}

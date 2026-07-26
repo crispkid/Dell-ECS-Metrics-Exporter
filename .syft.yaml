@@ -1,0 +1,10 @@
+check-for-app-update: false
+
+# Source SBOMs describe committed source and dependencies, not locally generated
+# binaries, evidence, coverage data, or Git internals. Image scans are
+# unaffected because these relative paths do not exist in the scratch image.
+exclude:
+  - "./.git/**"
+  - "./coverage/**"
+  - "./dist/**"
+  - "./test-results/**"

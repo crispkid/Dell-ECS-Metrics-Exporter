@@ -1,0 +1,134 @@
+replicaCount: 1
+
+image:
+  repository: dell-ecs-metrics-exporter
+  tag: dev
+  digest: ""
+  pullPolicy: IfNotPresent
+
+imagePullSecrets: []
+nameOverride: ""
+fullnameOverride: ""
+
+serviceAccount:
+  create: true
+  automount: false
+  annotations: {}
+  name: ""
+
+podAnnotations: {}
+podLabels: {}
+
+podSecurityContext:
+  runAsNonRoot: true
+  runAsUser: 65532
+  runAsGroup: 65532
+  fsGroup: 65532
+  seccompProfile:
+    type: RuntimeDefault
+
+securityContext:
+  allowPrivilegeEscalation: false
+  capabilities:
+    drop:
+      - ALL
+  readOnlyRootFilesystem: true
+
+config:
+  profilesDir: /profiles
+  existingConfigMap: ""
+  key: config.yaml
+  content: |-
+    server:
+      listenAddress: ":8080"
+    prometheus:
+      path: /metrics
+      protected: false
+    cache:
+      staleTolerance: 15m
+      maxStale: 1h
+    security:
+      inventoryApi:
+        enabled: true
+        authentication: token
+        tokenFile: /var/run/secrets/ecs-exporter/inventory-token
+        maxPageSize: 500
+    ecs:
+      clusters:
+        - name: replace-me
+          site: replace-me
+          environment: development
+          endpoint: https://ecs-management.example.invalid
+          usernameFile: /var/run/secrets/ecs-exporter/username
+          passwordFile: /var/run/secrets/ecs-exporter/password
+          tls:
+            verify: true
+
+# The chart never creates this Secret. Provision it through the platform secret
+# manager with the three keys below before installing the release.
+credentials:
+  existingSecret: ecs-exporter-credentials
+  inventoryTokenKey: inventory-token
+  usernameKey: username
+  passwordKey: password
+  mountPath: /var/run/secrets/ecs-exporter
+
+service:
+  type: ClusterIP
+  port: 8080
+  containerPort: 8080
+
+resources:
+  requests:
+    cpu: 50m
+    memory: 64Mi
+  limits:
+    cpu: "1"
+    memory: 512Mi
+
+livenessProbe:
+  httpGet:
+    path: /health
+    port: http
+  initialDelaySeconds: 5
+  periodSeconds: 10
+  timeoutSeconds: 2
+  failureThreshold: 3
+
+readinessProbe:
+  httpGet:
+    path: /api/v1/health
+    port: http
+  initialDelaySeconds: 2
+  periodSeconds: 10
+  timeoutSeconds: 2
+  failureThreshold: 3
+
+terminationGracePeriodSeconds: 30
+
+networkPolicy:
+  enabled: true
+  # Empty ingressFrom keeps the chart's backwards-compatible behavior and
+  # allows any source to scrape the metrics port. Production installations
+  # should set explicit selectors; see values-production.example.yaml.
+  ingressFrom: []
+  # Adding one or more egress rules also enables policyTypes: Egress. Keep this
+  # empty only when another cluster-wide policy already constrains egress.
+  egress: []
+
+podDisruptionBudget:
+  enabled: true
+  maxUnavailable: 1
+
+serviceMonitor:
+  enabled: false
+  path: /metrics
+  interval: 30s
+  scrapeTimeout: 10s
+  additionalLabels: {}
+
+extraVolumes: []
+extraVolumeMounts: []
+nodeSelector: {}
+tolerations: []
+affinity: {}

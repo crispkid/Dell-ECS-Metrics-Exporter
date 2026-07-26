@@ -1,0 +1,64 @@
+# Copy this file outside the repository, replace all environment-specific
+# values, and pass it after values.yaml:
+#   helm upgrade --install ecs-exporter ./charts/dell-ecs-metrics-exporter \
+#     --namespace monitoring --create-namespace \
+#     -f ./my-production-values.yaml
+
+image:
+  repository: ghcr.io/replace-with-owner/dell-ecs-metrics-exporter
+  # Production must use a verified immutable digest, not a mutable tag.
+  digest: sha256:replace-with-verified-release-digest
+  tag: ""
+
+credentials:
+  existingSecret: ecs-exporter-auth
+
+serviceMonitor:
+  enabled: true
+
+networkPolicy:
+  enabled: true
+  # This example permits Prometheus pods in the same namespace. Adapt the
+  # namespaceSelector/podSelector if Prometheus runs elsewhere.
+  ingressFrom:
+    - podSelector:
+        matchLabels:
+          app.kubernetes.io/name: prometheus
+  egress:
+    # DNS. Adapt labels to the cluster's DNS implementation.
+    - to:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: kube-system
+          podSelector:
+            matchLabels:
+              k8s-app: kube-dns
+      ports:
+        - protocol: UDP
+          port: 53
+        - protocol: TCP
+          port: 53
+    # Fail-closed documentation range. Replace with the ECS management CIDR.
+    # Replace port 4443 as well if the configured endpoint uses another port.
+    - to:
+        - ipBlock:
+            cidr: 192.0.2.0/24
+      ports:
+        - protocol: TCP
+          port: 4443
+
+resources:
+  requests:
+    cpu: 100m
+    memory: 128Mi
+  limits:
+    cpu: 1
+    memory: 512Mi
+
+# Each replica independently polls ECS. Keep one replica unless the additional
+# ECS API load has passed a target-scale test.
+replicaCount: 1
+
+podDisruptionBudget:
+  enabled: true
+  maxUnavailable: 0

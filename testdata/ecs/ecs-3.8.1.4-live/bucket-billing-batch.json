@@ -1,0 +1,49 @@
+{
+  "bucket_billing_infos": [
+    {
+      "namespace": "redacted-namespace",
+      "name": "redacted-bucket-unset",
+      "vpool_id": "urn:storageos:ReplicationGroupInfo:redacted:global",
+      "total_size": "3072",
+      "total_size_unit": "KB",
+      "total_objects": 1,
+      "sample_time": "2026-07-26T10:00:00Z",
+      "uptodate_till": "2026-07-26T10:00:00Z",
+      "total_mpu_size": "0",
+      "total_mpu_parts": 0,
+      "TagSet": [],
+      "total_objects_deleted": "0",
+      "total_size_deleted": "0"
+    },
+    {
+      "namespace": "redacted-namespace",
+      "name": "redacted-bucket-empty",
+      "vpool_id": "urn:storageos:ReplicationGroupInfo:redacted:global",
+      "total_size": "0",
+      "total_size_unit": "KB",
+      "total_objects": 0,
+      "sample_time": "2026-07-26T10:00:00Z",
+      "uptodate_till": "2026-07-26T10:00:00Z",
+      "total_mpu_size": "0",
+      "total_mpu_parts": 0,
+      "TagSet": [],
+      "total_objects_deleted": "0",
+      "total_size_deleted": "0"
+    },
+    {
+      "namespace": "redacted-namespace",
+      "name": "redacted-bucket-quota",
+      "vpool_id": "urn:storageos:ReplicationGroupInfo:redacted:global",
+      "total_size": "7168",
+      "total_size_unit": "KB",
+      "total_objects": 3,
+      "sample_time": "2026-07-26T10:00:00Z",
+      "uptodate_till": "2026-07-26T10:00:00Z",
+      "total_mpu_size": "0",
+      "total_mpu_parts": 0,
+      "TagSet": [],
+      "total_objects_deleted": "0",
+      "total_size_deleted": "0"
+    }
+  ]
+}

@@ -1,0 +1,28 @@
+{
+  "bucket_billing_infos": [
+    {
+      "namespace": "redacted-namespace",
+      "name": "redacted-bucket-empty",
+      "total_size": "0",
+      "total_size_unit": "KB",
+      "total_objects": 0,
+      "sample_time": "2026-07-25T12:00:00Z"
+    },
+    {
+      "namespace": "redacted-namespace",
+      "name": "redacted-bucket-unset",
+      "total_size": "2929.6875",
+      "total_size_unit": "KB",
+      "total_objects": 1,
+      "sample_time": "2026-07-25T12:00:00Z"
+    },
+    {
+      "namespace": "redacted-namespace",
+      "name": "redacted-bucket",
+      "total_size": "6835.9375",
+      "total_size_unit": "KB",
+      "total_objects": 3,
+      "sample_time": "2026-07-25T12:00:00Z"
+    }
+  ]
+}

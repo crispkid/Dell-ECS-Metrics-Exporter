@@ -1,0 +1,14 @@
+{
+  "namespace": "namespace-a",
+  "total_size": "3072.0",
+  "total_size_unit": "KB",
+  "total_objects": 12,
+  "total_mpu_size": "0.0",
+  "total_mpu_parts": "0",
+  "sample_time": "2026-01-15T12:00:00Z",
+  "bucket_billing_info": [],
+  "next_marker": "",
+  "uptodate_till": "2026-01-15T12:00:00Z",
+  "total_objects_deleted": "0",
+  "total_size_deleted": "0.0"
+}

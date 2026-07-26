@@ -1,0 +1,21 @@
+{
+  "_links": {
+    "self": {
+      "href": "/dashboard/rglinks/rg-link-a"
+    }
+  },
+  "apiChange": "1",
+  "id": "rg-link-a",
+  "rgName": "replication-group-a",
+  "zone1Name": "vdc-a",
+  "zone2Name": "vdc-b",
+  "rglinkStatus": "Good",
+  "chunksRepoPendingReplicationTotalSize": 1048576,
+  "chunksJournalPendingReplicationTotalSize": 524288,
+  "chunksPendingXorTotalSize": 0,
+  "replicationRpoTimestamp": 1768478100,
+  "FailoverState": "RECOVERY_DONE",
+  "FailoverProgressPercent": 100,
+  "BootstrapState": "ReplicateBTree",
+  "BootstrapProgressPercent": 25
+}

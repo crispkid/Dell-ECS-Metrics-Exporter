@@ -1,0 +1,11 @@
+{{- if not .Values.config.existingConfigMap }}
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ include "dell-ecs-metrics-exporter.fullname" . }}
+  labels:
+    {{- include "dell-ecs-metrics-exporter.labels" . | nindent 4 }}
+data:
+  {{ .Values.config.key }}: |
+    {{- tpl .Values.config.content . | nindent 4 }}
+{{- end }}

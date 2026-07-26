@@ -1,0 +1,3 @@
+fail-on-severity: high
+output: table
+check-for-app-update: false

@@ -1,0 +1,81 @@
+{
+  "schema_version": "1.0",
+  "profile_id": "ecs-3.6",
+  "version": {
+    "min_inclusive": "3.6.0.0",
+    "max_exclusive": "3.7.0.0",
+    "parser": "dell-four-part-with-optional-build-suffix",
+    "documented_releases": [
+      "3.6.0.0",
+      "3.6.1.0",
+      "3.6.2.6"
+    ],
+    "tested_builds": []
+  },
+  "selection": {
+    "logical_api": "version-discovery",
+    "method": "GET",
+    "path": "/vdc/nodes",
+    "version_field": "node[].version",
+    "mixed_version_policy": "intersection-only-no-interval-derived-rates",
+    "unknown_version_policy": "reject"
+  },
+  "transport": {
+    "scheme": "https",
+    "management_port": 4443,
+    "login_path": "/login",
+    "token_header": "X-SDS-AUTH-TOKEN",
+    "whoami_path": "/user/whoami",
+    "logout_path": "/logout",
+    "flux_query_path": "/flux/api/external/v2/query",
+    "host_header_policy": "legacy"
+  },
+  "capabilities": {
+    "authentication": "native",
+    "version_discovery": "native",
+    "cluster_health": "derived",
+    "cluster_capacity": "native",
+    "node_inventory": "native",
+    "node_health": "native",
+    "node_service_process": "conditional",
+    "node_cpu_memory": "native",
+    "node_disk_capacity": "conditional",
+    "node_network_counters": "native",
+    "namespace_inventory": "native",
+    "namespace_capacity": "native",
+    "namespace_quota": "native",
+    "namespace_performance": "native",
+    "bucket_inventory": "native",
+    "bucket_capacity": "native",
+    "bucket_quota": "native",
+    "bucket_performance": "unavailable",
+    "vdc_performance": "native",
+    "flux_latest_snapshot": "native",
+    "flux_interval_rates": "native",
+    "replication_status": "native",
+    "replication_lag": "derived",
+    "recovery_progress": "conditional"
+  },
+  "known_issues": [
+    {
+      "id": "ECS36-DASHBOARD-PERFORMANCE-REMOVED",
+      "effect": "ECS 3.6 removed node, transaction and disk performance fields from several Dashboard APIs.",
+      "mitigation": "Use Flux monitoring_op, monitoring_main and monitoring_vdc mappings; do not parse removed Dashboard fields even when present in an older schema example."
+    },
+    {
+      "id": "ECS36-UNIT-NAME-AMBIGUITY",
+      "effect": "Management API fields use GB/KB names while portal documentation also discusses GiB/TiB.",
+      "mitigation": "Use the documented response unit conversion and require a known-size sandbox assertion before marking a build certified."
+    }
+  ],
+  "evidence": {
+    "status": "documentation-verified",
+    "official_sources": [
+      "https://dl.dell.com/content/docu101271_ecs-3-6-rest-api-reference.zip",
+      "https://dl.dell.com/content/docu102929_ecs-3-6-1-monitoring-guide.pdf"
+    ],
+    "api_reference_access": "downloaded-and-reviewed",
+    "fixture_classification": "synthetic-document-derived",
+    "sandbox_certified": false
+  }
+}
