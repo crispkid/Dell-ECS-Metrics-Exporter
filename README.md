@@ -13,7 +13,9 @@ Repository 內可完成的 runtime、測試、部署範本與 release gate 已�
 | 項目 | 狀態 | 說明 |
 |---|---|---|
 | Exporter runtime | 已完成 | 多 Cluster 收集、快取、Prometheus metrics、Inventory API、health/readiness 與安全控制已實作 |
-| 本機品質驗證 | 部分通過 | unit/component/race test、84.3% coverage、build、Profile/static deployment checks、CI policy、可重現 release archive 與 synthetic target-scale test 已通過；`govulncheck` 仍需可連線的 vulnerability database 重跑 |
+| 本機品質驗證 | 已通過 | 2026-07-27 以可連線的 vulnerability database 執行完整 Harness；lint、format、typecheck、test、84.3% coverage、build、CI policy、security 與 deployment checks 全部通過，未發現 Go vulnerability |
+| ECS CE 3.6.2.0 | 部分實測 | Exact build 自動選擇 `ecs-3.6`；Management、known-size Bucket/quota/billing、Inventory/metrics 已通過；Flux `node-resources` 與 `performance` 回 HTTP 503，因此既有 live-certification gate 未通過 |
+| ECS CE 3.7.0.0 | 部分實測 | Exact build 自動選擇 `ecs-3.7`；Management、known-size Bucket、正值 quota、billing、Inventory/metrics 已通過；Flux `node-resources` 回 HTTP 503，readiness 為 `DEGRADED` |
 | ECS CE 3.8.0.3 | 部分實測 | Management、Bucket inventory/quota/billing 已以 non-empty data 驗證；Flux `node-resources` 仍受 CE 回 HTTP 503 限制 |
 | ECS CE 3.8.1.4 | 部分實測 | Exact build 自動選擇 `ecs-3.8.1`；Management、known-size Bucket/quota/billing、Inventory/metrics 已通過；Flux 仍回 HTTP 503 |
 | ECS 3.8.1.4 正式設備 | 待認證 | 正式發布前仍須以同一個 release candidate commit 完成 live API、fixtures、mapping 與 Profile evidence 審查 |
@@ -28,8 +30,8 @@ release，必須逐項完成 [Production Release Checklist](docs/RELEASE_CHECKLI
 
 | Profile | ECS 版本範圍 | 目前證據 |
 |---|---|---|
-| `ecs-3.6` | `>= 3.6.0.0`、`< 3.7.0.0` | 官方文件 mapping + synthetic fixtures |
-| `ecs-3.7` | `>= 3.7.0.0`、`< 3.8.0.0` | 部分官方文件 + candidate mapping + synthetic fixtures |
+| `ecs-3.6` | `>= 3.6.0.0`、`< 3.7.0.0` | 官方文件 mapping + synthetic fixtures + ECS CE 3.6.2.0 Management/known-size local partial live |
+| `ecs-3.7` | `>= 3.7.0.0`、`< 3.8.0.0` | 部分官方文件 + candidate mapping + synthetic fixtures + ECS CE 3.7.0.0 Management/known-size local partial live |
 | `ecs-3.8.0` | `>= 3.8.0.0`、`< 3.8.1.0` | 部分官方文件 + ECS CE 3.8.0.3 Management/非空 Bucket partial live fixtures + synthetic fixtures |
 | `ecs-3.8.1` | `>= 3.8.1.0`、`< 3.8.2.0` | 部分官方文件 + ECS CE 3.8.1.4 Management/known-size partial live fixtures + synthetic fixtures |
 
@@ -40,6 +42,9 @@ ECS CE 實測範圍與限制記錄於
 [ECS CE 3.8.0.3 Live Validation Record](docs/ecs-api/validation/ecs-ce-3.8.0.3-2026-07-25.md)
 與
 [ECS CE 3.8.1.4 Live Validation Record](docs/ecs-api/validation/ecs-ce-3.8.1.4-2026-07-26.md)。
+3.6.2.0 與 3.7.0.0 的本次結果目前只有本機、已去識別化且被 Git 排除的
+`test-results/` evidence，尚未轉換成受審查的 committed fixtures 或 Profile
+certification evidence。
 
 ## 功能摘要
 
@@ -83,6 +88,15 @@ contract：三個 Buckets 合計四個 objects、10,485,760 bytes，Billing 回
 `3.8.1.4.140200.8103892f11b` 正確選到 `ecs-3.8.1`，但 CE 的 Flux external query
 仍回 HTTP 503，因此 CPU/memory/network、VDC/Namespace performance 與 range
 boundary gate 尚未通過，不能視為正式設備 Profile 認證。
+
+ECS CE 3.7.0.0（exact build `3.7.0.0.137697.a664876f8ed`）與 3.6.2.0
+（exact build `3.6.2.0.127497.982f3bd4450`）也以相同的 known-size dataset
+完成 follow-up：四個 objects 合計 10,485,760 bytes，Bucket 分布為
+7,340,032 bytes／3 objects、3,145,728 bytes／1 object 與空 Bucket；
+1/2 GB 的正值 soft/hard quota 亦正確映射。3.7.0.0 的 Flux
+`node-resources` 回 HTTP 503；3.6.2.0 的 `node-resources` 與 `performance`
+都回 HTTP 503。這些結果證明兩個 build 的 Management-backed metrics 可用，
+但不證明 Flux-backed metrics、整個 Profile 或正式設備已認證。
 
 ## 1. 選擇安裝方式
 
@@ -348,8 +362,9 @@ read-only live certification smoke passed; evidence is partial-live, not formal 
 `.gitignore` 排除。原始 ECS response、endpoint、Inventory 名稱與 credential
 不會寫入該摘要。
 
-ECS CE 3.8.1.4 的 Flux external query 在目前實測環境持續回 HTTP 503。如果確認
-唯一的正值 collector error 是 `node-resources`，可在 **CE 相容性測試**明確加入：
+ECS CE 3.7.0.0、3.8.0.3 與 3.8.1.4 的 Flux external query 在目前實測環境回
+HTTP 503。如果確認唯一的正值 collector error 是 `node-resources`，可在
+**CE 相容性測試**明確加入：
 
 ```bash
 ECS_CERT_CONFIG=config.local.yaml \
@@ -364,6 +379,12 @@ ECS_CERT_ALLOW_DEGRADED=true \
 `UP`，並另外完成 Flux、multi-VDC、proxy/Host/SNI、token renewal、failure
 injection 與 target-scale gates。詳細證據邊界見
 [ECS CE 3.8.1.4 Live Validation Record](docs/ecs-api/validation/ecs-ce-3.8.1.4-2026-07-26.md)。
+
+ECS CE 3.6.2.0 實測同時出現 `node-resources` 與 `performance` collector error；
+現有 gate 只允許前者，因此即使設定 `ECS_CERT_ALLOW_DEGRADED=true` 仍會失敗。
+這個失敗不影響已個別通過的 Management-backed metrics，但也不可擴大解讀為完整
+3.6 Profile 相容。正式變更 allowlist 或 capability 前，必須先取得官方／實體設備
+Flux evidence，不能只依 CE 503 放寬認證。
 
 ## 4. CLI 參數與環境變數
 
@@ -1186,9 +1207,10 @@ bash -lc 'source scripts/go-env.sh; go test -race -timeout=3m ./...'
 ```
 
 目前 coverage gate 為 80%。`security` stage 需要連線 Go 官方 vulnerability database；
-目前本機最後一次執行已完成 credential scan、`go mod tidy -diff` 與
-`go mod verify`，但 `govulncheck` 因無法連線外部 database 而未完成，因此完整
-`verify` 仍不得標示為通過。
+2026-07-27 的本機完整 `verify` 已在可連線環境通過，coverage 為 84.3%，
+`govulncheck` 未發現 vulnerability。該次 deployment check 因本機未安裝
+`systemd-analyze`、`promtool` 與 `kubeconform`，只完成對應的 strict static checks；
+這不取代真實 systemd host、Prometheus、container 或 Kubernetes runtime evidence。
 
 Production 發布的 fail-closed 總入口：
 
