@@ -1,0 +1,48 @@
+name: dell-ecs-observability
+
+services:
+  prometheus:
+    image: quay.io/prometheus/prometheus:v3.13.1
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=7d
+      - --web.enable-lifecycle
+    ports:
+      - "127.0.0.1:${PROMETHEUS_PORT:-9090}:9090"
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ../prometheus/alerts.yaml:/etc/prometheus/rules/dell-ecs-metrics-exporter.yaml:ro
+      - prometheus-data:/prometheus
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+  grafana:
+    image: grafana/grafana:13.1.0
+    depends_on:
+      - prometheus
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer
+      GF_AUTH_DISABLE_LOGIN_FORM: "true"
+      GF_USERS_VIEWERS_CAN_EDIT: "true"
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_CHECK_FOR_UPDATES: "false"
+      GF_ANALYTICS_CHECK_FOR_PLUGIN_UPDATES: "false"
+      GF_PLUGINS_PREINSTALL_DISABLED: "true"
+      GF_PLUGINS_PLUGIN_ADMIN_ENABLED: "false"
+    ports:
+      - "127.0.0.1:${GRAFANA_PORT:-3000}:3000"
+    volumes:
+      - ./grafana/provisioning/datasources/prometheus.yaml:/etc/grafana/provisioning/datasources/prometheus.yaml:ro
+      - grafana-data:/var/lib/grafana
+    restart: unless-stopped
+    security_opt:
+      - no-new-privileges:true
+
+volumes:
+  prometheus-data:
+  grafana-data:

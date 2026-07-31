@@ -27,5 +27,7 @@ ecs:
       usernameFile: /etc/dell-ecs-metrics-exporter/secrets/username
       passwordFile: /etc/dell-ecs-metrics-exporter/secrets/password
       tls:
+        # false is supported for an accepted self-signed-certificate exception
+        # and emits a startup warning; true remains recommended.
         verify: true
         caFile: ""

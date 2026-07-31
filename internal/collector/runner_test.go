@@ -56,7 +56,7 @@ func TestRunnerCollectsAllDomains(t *testing.T) {
 	snapshot := store.Snapshot()
 	if len(snapshot.Clusters) != 1 || len(snapshot.Nodes) != 2 ||
 		len(snapshot.Namespaces) != 1 || len(snapshot.Buckets) != 2 ||
-		len(snapshot.Replications) != 2 || len(snapshot.Performances) != 8 {
+		len(snapshot.Replications) != 2 || len(snapshot.Performances) != 12 {
 		t.Fatalf("snapshot counts = clusters:%d nodes:%d namespaces:%d buckets:%d replications:%d performances:%d",
 			len(snapshot.Clusters), len(snapshot.Nodes), len(snapshot.Namespaces),
 			len(snapshot.Buckets), len(snapshot.Replications), len(snapshot.Performances))
@@ -73,7 +73,8 @@ func TestRunnerCollectsAllDomains(t *testing.T) {
 		snapshot.Buckets[0].UsedBytes == nil || !snapshot.Buckets[0].HardQuotaConfigured {
 		t.Fatalf("enriched snapshot = %#v", snapshot)
 	}
-	if api.callCount("whoami") != 1 || api.callCount("vdc-performance") != 1 ||
+	if api.callCount("whoami") != 1 || api.callCount("vdc-performance") != 3 ||
+		api.callCount("node-resources") != 3 ||
 		api.callCount("replication-link") != 1 || api.callCount("recovery-link") != 1 ||
 		api.callCount("bucket-billing-batch") != 1 || api.callCount("bucket-billing") != 0 {
 		t.Fatalf("API calls = %#v", api.calls)
@@ -137,6 +138,39 @@ func TestNodeResourceSnapshotClearsMissingSeries(t *testing.T) {
 	if nodes[0].CPUUsageRatio == nil || nodes[1].CPUUsageRatio != nil ||
 		nodes[1].MemoryUsedBytes != nil || len(nodes[1].Network) != 0 {
 		t.Fatalf("resource snapshot retained stale series: %#v", nodes)
+	}
+}
+
+func TestNodeResourceQueriesReplaceCacheAtomically(t *testing.T) {
+	t.Parallel()
+	api := newFixtureAPI(t, "ecs-3.6")
+	store := cache.New()
+	runner := NewRunner(
+		testRunnerCluster(), config.Defaults().Collector, api, loadCollectorCatalog(t), store, nil,
+	)
+	if err := runner.CollectNodes(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if err := runner.CollectNodeResources(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	before := store.Snapshot().Nodes
+	if before[0].CPUUsageRatio == nil || before[0].MemoryUsedBytes == nil ||
+		len(before[0].Network) != 1 {
+		t.Fatalf("initial node resources = %#v", before)
+	}
+
+	api.failAt["node-resources"] = 5
+	if err := runner.CollectNodeResources(context.Background()); err == nil {
+		t.Fatal("partial multi-query resource refresh succeeded")
+	}
+	after := store.Snapshot().Nodes
+	if after[0].CPUUsageRatio == nil ||
+		*after[0].CPUUsageRatio != *before[0].CPUUsageRatio ||
+		after[0].MemoryUsedBytes == nil ||
+		*after[0].MemoryUsedBytes != *before[0].MemoryUsedBytes ||
+		len(after[0].Network) != len(before[0].Network) {
+		t.Fatalf("failed refresh changed node resources: before=%#v after=%#v", before, after)
 	}
 }
 
@@ -495,14 +529,49 @@ func TestConditionalPerformanceCanBeExplicitlyEnabled(t *testing.T) {
 	runner := NewRunner(
 		cluster, config.Defaults().Collector, api, loadCollectorCatalog(t), store, nil,
 	)
+	if err := runner.CollectCluster(context.Background()); err != nil {
+		t.Fatal(err)
+	}
 	if err := runner.CollectPerformance(context.Background()); err != nil {
 		t.Fatal(err)
 	}
-	if api.callCount("vdc-performance") != 1 || len(store.Snapshot().Performances) != 8 {
+	if api.callCount("vdc-performance") != 3 || len(store.Snapshot().Performances) != 12 {
 		t.Fatalf(
 			"calls=%d performances=%#v",
 			api.callCount("vdc-performance"), store.Snapshot().Performances,
 		)
+	}
+}
+
+func TestPerformanceQueriesReplaceCacheAtomically(t *testing.T) {
+	t.Parallel()
+	api := newFixtureAPI(t, "ecs-3.8.1")
+	cluster := testRunnerCluster()
+	cluster.Capabilities.EnabledConditional = []string{
+		"vdc_performance", "namespace_performance",
+	}
+	store := cache.New()
+	runner := NewRunner(
+		cluster, config.Defaults().Collector, api, loadCollectorCatalog(t), store, nil,
+	)
+	if err := runner.CollectCluster(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	if err := runner.CollectPerformance(context.Background()); err != nil {
+		t.Fatal(err)
+	}
+	before := store.Snapshot().Performances
+	if len(before) != 12 {
+		t.Fatalf("initial performance snapshot = %#v", before)
+	}
+
+	api.failAt["vdc-performance"] = 5
+	if err := runner.CollectPerformance(context.Background()); err == nil {
+		t.Fatal("partial multi-query performance refresh succeeded")
+	}
+	after := store.Snapshot().Performances
+	if len(after) != len(before) || after[0] != before[0] || after[len(after)-1] != before[len(before)-1] {
+		t.Fatalf("failed refresh changed performance cache: before=%#v after=%#v", before, after)
 	}
 }
 
@@ -586,24 +655,39 @@ func TestCollectorValidationAndSafeErrors(t *testing.T) {
 
 func TestFluxQueriesOnlyRequestEnabledCapabilityScopes(t *testing.T) {
 	t.Parallel()
-	networkOnly := nodeResourceFluxQuery(false, false, true)
-	if !strings.Contains(networkOnly, `r._measurement == "net"`) ||
-		strings.Contains(networkOnly, `"disk"`) ||
-		strings.Contains(networkOnly, `"cpu"`) ||
-		strings.Contains(networkOnly, `"mem"`) {
-		t.Fatalf("network query = %s", networkOnly)
+	networkOnly := nodeResourceFluxQueries(false, false, true)
+	if len(networkOnly) != 1 ||
+		!strings.Contains(networkOnly[0], `r._measurement == "net"`) ||
+		!strings.Contains(networkOnly[0], `"interface"`) ||
+		strings.Contains(networkOnly[0], `"disk"`) ||
+		strings.Contains(networkOnly[0], `"cpu"`) ||
+		strings.Contains(networkOnly[0], `"mem"`) {
+		t.Fatalf("network queries = %#v", networkOnly)
 	}
-	diskCPU := nodeResourceFluxQuery(true, true, false)
-	if !strings.Contains(diskCPU, `"disk"`) || !strings.Contains(diskCPU, `"cpu"`) ||
-		strings.Contains(diskCPU, `"net"`) {
-		t.Fatalf("disk/cpu query = %s", diskCPU)
+	diskCPU := nodeResourceFluxQueries(true, true, false)
+	if len(diskCPU) != 3 ||
+		!strings.Contains(diskCPU[0], `"cpu-total"`) ||
+		!strings.Contains(diskCPU[0], `"cpu"`) ||
+		!strings.Contains(diskCPU[1], `"mem"`) ||
+		!strings.Contains(diskCPU[2], `"disk"`) ||
+		strings.Contains(strings.Join(diskCPU, "\n"), `"net"`) {
+		t.Fatalf("disk/CPU queries = %#v", diskCPU)
 	}
-	if query := performanceFluxQuery(true, false); !strings.Contains(query, "not exists r.namespace") {
-		t.Fatalf("VDC-only query = %s", query)
+	vdcOnly := performanceFluxQueries(true, false)
+	if len(vdcOnly) != 2 ||
+		!strings.Contains(vdcOnly[0], `"cq_performance_throughput"`) ||
+		!strings.Contains(vdcOnly[1], `"cq_performance_latency"`) ||
+		!strings.Contains(vdcOnly[1], `"id"`) ||
+		strings.Contains(strings.Join(vdcOnly, "\n"), `"_delta"`) {
+		t.Fatalf("VDC-only queries = %#v", vdcOnly)
 	}
-	if query := performanceFluxQuery(false, true); !strings.Contains(query, "exists r.namespace") ||
-		strings.Contains(query, "not exists") {
-		t.Fatalf("namespace-only query = %s", query)
+	namespaceOnly := performanceFluxQueries(false, true)
+	if len(namespaceOnly) != 1 ||
+		!strings.Contains(namespaceOnly[0], `"cq_performance_transaction_ns"`) ||
+		!strings.Contains(namespaceOnly[0], `"cq_performance_error_ns"`) ||
+		!strings.Contains(namespaceOnly[0], `"namespace"`) ||
+		strings.Contains(namespaceOnly[0], `"cq_performance_latency"`) {
+		t.Fatalf("Namespace-only queries = %#v", namespaceOnly)
 	}
 }
 
@@ -631,12 +715,14 @@ type fixtureAPI struct {
 	mu          sync.Mutex
 	calls       map[string]int
 	fail        map[string]error
+	failAt      map[string]int
 	bucketPages bool
 }
 
 func newFixtureAPI(t *testing.T, versionDir string) *fixtureAPI {
 	return &fixtureAPI{
-		t: t, versionDir: versionDir, calls: make(map[string]int), fail: make(map[string]error),
+		t: t, versionDir: versionDir, calls: make(map[string]int),
+		fail: make(map[string]error), failAt: make(map[string]int),
 	}
 }
 
@@ -700,20 +786,54 @@ func (a *fixtureAPI) GetBytes(
 }
 
 func (a *fixtureAPI) PostBytes(
-	_ context.Context, logical, _ string, _ url.Values, _ any,
+	_ context.Context, logical, _ string, _ url.Values, body any,
 ) ([]byte, error) {
 	a.mu.Lock()
 	a.calls[logical]++
+	call := a.calls[logical]
 	failure := a.fail[logical]
+	if failure == nil && a.failAt[logical] == call {
+		failure = errors.New("injected POST failure")
+	}
 	a.mu.Unlock()
 	if failure != nil {
 		return nil, failure
 	}
 	switch logical {
 	case "node-resources":
-		return collectorFixture(a.t, "common", "flux-node-resources.json"), nil
+		request, ok := body.(map[string]string)
+		if !ok {
+			return nil, errors.New("node resource query body is invalid")
+		}
+		query := request["query"]
+		switch {
+		case strings.Contains(query, `r._measurement == "cpu"`):
+			return collectorFixture(a.t, "common", "flux-node-cpu.json"), nil
+		case strings.Contains(query, `r._measurement == "mem"`):
+			return collectorFixture(a.t, "common", "flux-node-memory.json"), nil
+		case strings.Contains(query, `r._measurement == "net"`):
+			return collectorFixture(a.t, "common", "flux-node-network.json"), nil
+		case strings.Contains(query, `r._measurement == "disk"`):
+			return collectorFixture(a.t, "common", "flux-node-disk.json"), nil
+		default:
+			return nil, errors.New("node resource query measurement is missing")
+		}
 	case "vdc-performance":
-		return collectorFixture(a.t, "common", "flux-vdc-performance.json"), nil
+		request, ok := body.(map[string]string)
+		if !ok {
+			return nil, errors.New("performance query body is invalid")
+		}
+		query := request["query"]
+		switch {
+		case strings.Contains(query, `"cq_performance_transaction_ns"`):
+			return collectorFixture(a.t, "common", "flux-namespace-performance.json"), nil
+		case strings.Contains(query, `"cq_performance_latency"`):
+			return collectorFixture(a.t, "common", "flux-vdc-latency.json"), nil
+		case strings.Contains(query, `"cq_performance_throughput"`):
+			return collectorFixture(a.t, "common", "flux-vdc-core-performance.json"), nil
+		default:
+			return nil, errors.New("performance query measurement is missing")
+		}
 	case "bucket-billing-batch":
 		return collectorFixture(a.t, "common", "bucket-billing-batch.json"), nil
 	default:

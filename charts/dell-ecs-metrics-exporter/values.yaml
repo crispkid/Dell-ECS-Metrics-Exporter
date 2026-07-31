@@ -62,6 +62,8 @@ config:
           usernameFile: /var/run/secrets/ecs-exporter/username
           passwordFile: /var/run/secrets/ecs-exporter/password
           tls:
+            # false is supported for an accepted self-signed-certificate
+            # exception and emits a startup warning; true is recommended.
             verify: true
 
 # The chart never creates this Secret. Provision it through the platform secret

@@ -11,6 +11,8 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"dell-ecs-metrics-exporter/internal/config"
 )
 
 func TestRunValidationModes(t *testing.T) {
@@ -115,6 +117,25 @@ func TestEnvOrDefault(t *testing.T) {
 	if envOrDefault("ECS_EXPORTER_TEST_VALUE", "fallback") != "configured" ||
 		envOrDefault("ECS_EXPORTER_TEST_MISSING", "fallback") != "fallback" {
 		t.Fatal("environment fallback is incorrect")
+	}
+}
+
+func TestDisabledTLSVerificationEmitsWarningWithoutEndpoint(t *testing.T) {
+	t.Parallel()
+	var output bytes.Buffer
+	logger := slog.New(slog.NewJSONHandler(&output, nil))
+	verify := false
+	warnIfTLSVerificationDisabled(logger, config.ClusterConfig{
+		Name: "production-a", Environment: "production",
+		Endpoint: "https://sensitive.example.invalid",
+		TLS:      config.ClusterTLSConfig{Verify: &verify},
+	})
+	logged := output.String()
+	if !strings.Contains(logged, `"level":"WARN"`) ||
+		!strings.Contains(logged, `"cluster":"production-a"`) ||
+		!strings.Contains(logged, `"environment":"production"`) ||
+		strings.Contains(logged, "sensitive.example.invalid") {
+		t.Fatalf("TLS warning = %s", logged)
 	}
 }
 

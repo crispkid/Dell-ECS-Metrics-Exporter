@@ -52,6 +52,8 @@ ecs:
       usernameFile: .local-secrets/username
       passwordFile: .local-secrets/password
       tls:
+        # Recommended default. Set false only for an explicitly accepted
+        # self-signed-certificate exception; startup will emit a warning.
         verify: true
         caFile: ""
       timeouts:

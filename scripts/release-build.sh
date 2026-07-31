@@ -80,6 +80,11 @@ for target in "${targets[@]}"; do
     -ldflags "-s -w -X main.version=$release_version -X main.commit=$build_commit -X main.buildDate=$build_date" \
     -o "$stage/ecs-exporter" \
     ./cmd/ecs-exporter
+  CGO_ENABLED=0 GOOS="$target_os" GOARCH="$target_arch" go build \
+    -trimpath \
+    -ldflags "-s -w -X main.version=$release_version -X main.commit=$build_commit -X main.buildDate=$build_date" \
+    -o "$stage/ecs-flux-probe" \
+    ./cmd/ecs-flux-probe
   cp LICENSE README.md "$stage/"
   cp profiles/*.json "$stage/profiles/"
   if [[ "$target_os" == "linux" ]]; then

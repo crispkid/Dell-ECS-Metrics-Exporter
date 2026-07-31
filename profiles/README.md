@@ -8,14 +8,20 @@
 
 | Profile | Version range | Mapping | Evidence status |
 |---|---|---|---|
-| `ecs-3.6` | `>=3.6.0.0, <3.7.0.0` | `docs/ecs-api/ecs-3.6.md` | 官方 API/Monitoring 文件；真機未驗證 |
-| `ecs-3.7` | `>=3.7.0.0, <3.8.0.0` | `docs/ecs-api/ecs-3.7.md` | 官方索引與已知問題文件；REST ZIP/真機待驗證 |
-| `ecs-3.8.0` | `>=3.8.0.0, <3.8.1.0` | `docs/ecs-api/ecs-3.8.0.md` | 官方索引與已知問題文件；ECS CE 3.8.0.3 Management 與修復後 non-empty Bucket partial-live 通過；REST ZIP/正式版 Flux 仍待驗證 |
-| `ecs-3.8.1` | `>=3.8.1.0, <3.8.2.0` | `docs/ecs-api/ecs-3.8.1.md` | 官方索引與修正資訊；ECS CE 3.8.1.4 Management/known-size partial-live 通過；CE Flux HTTP 503；REST ZIP/正式設備待驗證 |
+| `ecs-3.6` | `>=3.6.0.0, <3.7.0.0` | `docs/ecs-api/ecs-3.6.md` | 共用功能 `validated-shared`；保留 3.6 interval/native 與 Dashboard 差異 |
+| `ecs-3.7` | `>=3.7.0.0, <3.8.0.0` | `docs/ecs-api/ecs-3.7.md` | 共用功能 `validated-shared`；interval rate 依已知問題維持 unavailable |
+| `ecs-3.8.0` | `>=3.8.0.0, <3.8.1.0` | `docs/ecs-api/ecs-3.8.0.md` | 共用功能 `validated-shared`；Host Header 與 interval policy 仍版本別處理 |
+| `ecs-3.8.1` | `>=3.8.1.0, <3.8.2.0` | `docs/ecs-api/ecs-3.8.1.md` | 共用功能 `validated-shared`；interval rate 仍 conditional |
+
+功能驗證採 `shared-live-any-target-version`：同一 production path 功能只要在任一
+目標版本取得真實 CE/appliance evidence，就列入四個 Profile 的
+`evidence.shared_validated_capabilities`。完整矩陣見
+`docs/ecs-api/feature-validation.md`。
 
 `documentation-verified` 不等同 `sandbox_certified`。`documented_releases` 是供
 contract test 使用的官方文件可辨識版本清單，不保證列出每個歷史 patch，也不表示
-該 build 已通過 Exporter 測試。所有 Profile 的 `tested_builds` 目前均為空。
+該 build 已通過 Exporter 測試。`tested_builds` 只記 exact-build 執行紀錄，並不是
+共用功能驗證的必要條件；目前所有 Profile 仍為空。
 ECS CE 3.8.0.3 的部分 Management API evidence 未涵蓋 REST ZIP、正式版 Flux、
 replication 與完整故障注入，因此不足以加入 `tested_builds`。
 `testdata/ecs/ecs-3.8.0.3-live/` 的 redacted partial-live fixtures
@@ -54,7 +60,8 @@ conditional capability；設定不能把 `unavailable` 改成可用，mixed-vers
 未來只有在 `tested_builds` 非空、`evidence.status=sandbox-verified`、
 `fixture_classification=redacted-sandbox-derived`、API reference 已 reviewed 且
 `sandbox_certified=true` 同時成立時，strict loader 才接受 sandbox certification。
-目前四個 repository Profile 均未達到這些條件。
+目前四個 repository Profile 均未達到完整 Profile certification 條件，但已在
+machine-readable evidence 中標示共用功能驗證狀態。
 
 ## Validation
 
@@ -66,5 +73,6 @@ go run ./cmd/ecs-exporter -profiles-dir profiles -validate-profiles
 ./HARNESS/harness.sh test
 ```
 
-通過這些檢查只能證明 repository contract、synthetic fixtures 與已提交的
-redacted partial-live fixtures 一致，不能證明整個 Dell ECS Profile 真機相容性。
+通過這些檢查會驗證共享功能清單只引用該 Profile 已提供且非 `unavailable` 的
+capability。真實功能狀態依 ECS-011 跨版本繼承；完整 exact-build Profile
+certification 仍是另一個獨立狀態。

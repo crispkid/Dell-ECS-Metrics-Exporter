@@ -175,6 +175,8 @@
         "official_sources",
         "api_reference_access",
         "fixture_classification",
+        "feature_validation_policy",
+        "shared_validated_capabilities",
         "sandbox_certified"
       ],
       "properties": {
@@ -205,6 +207,18 @@
             "synthetic-document-derived",
             "redacted-sandbox-derived"
           ]
+        },
+        "feature_validation_policy": {
+          "const": "shared-live-any-target-version"
+        },
+        "shared_validated_capabilities": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
         },
         "sandbox_certified": {
           "type": "boolean"

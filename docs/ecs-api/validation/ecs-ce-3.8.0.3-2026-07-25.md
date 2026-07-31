@@ -8,6 +8,8 @@
   `3.8.0.3.138685.3a0a9b6bf3a`
 - Selected Exporter Profile: `ecs-3.8.0`
 - Result: partial live Management API evidence; Profile certification remains pending
+- ECS-011 disposition: the successfully exercised functions listed in
+  `../feature-validation.md` are `validated-shared` across all four target Profiles
 
 This record is deliberately redacted. It contains no endpoint, credential, token, cookie,
 Authorization header, node identifier, private address or raw response body.
@@ -25,8 +27,8 @@ does not include the production fabric layer and is not suitable for failure-sce
 <https://github.com/EMCECS/ECS-CommunityEdition#feature-differences>.
 
 The CE certificate was self-signed with `CN=localhost`; the isolated test configuration
-therefore used `tls.verify: false`. This does not change the production requirement to use
-certificate verification and a trusted CA.
+therefore used `tls.verify: false`. ECS-009 now permits this explicit setting in every
+environment and emits a startup warning; this CE run did not establish verified TLS identity.
 
 ## Live Results
 

@@ -467,9 +467,6 @@ func (c ClusterConfig) validate() []error {
 	if (c.Password == "") == (c.PasswordFile == "") {
 		problems = append(problems, fmt.Errorf("cluster %q requires exactly one of password or passwordFile", c.Name))
 	}
-	if !c.TLS.VerificationEnabled() && strings.EqualFold(c.Environment, "production") {
-		problems = append(problems, fmt.Errorf("cluster %q cannot disable TLS verification in production", c.Name))
-	}
 	if c.TLS.CAFile != "" {
 		problems = append(problems, validateReadableFile(c.TLS.CAFile, "cluster CA file")...)
 	}

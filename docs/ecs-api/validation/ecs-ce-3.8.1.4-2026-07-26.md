@@ -9,6 +9,8 @@
 - Selected Exporter Profile: `ecs-3.8.1`
 - Result: partial live Management API and Exporter evidence; Profile certification remains
   pending
+- ECS-011 disposition: the successfully exercised functions listed in
+  `../feature-validation.md` are `validated-shared` across all four target Profiles
 
 This record is deliberately redacted. It contains no endpoint, credential, token, cookie,
 Authorization header, private address, node identifier or unredacted raw response body.
@@ -30,8 +32,9 @@ Exporter authentication used a dedicated `SYSTEM_MONITOR` management account.
 
 ECS CE is a reduced-footprint trial/PoC edition. It is not evidence for appliance fabric,
 multi-node failure handling or production performance. The CE certificate was self-signed,
-so this isolated run used `tls.verify: false`; production still requires a trusted CA and
-certificate verification.
+so this isolated run used `tls.verify: false`. ECS-009 now permits this explicit setting in
+every environment and emits a startup warning; this CE run did not establish verified TLS
+identity.
 
 ## Installer Result
 

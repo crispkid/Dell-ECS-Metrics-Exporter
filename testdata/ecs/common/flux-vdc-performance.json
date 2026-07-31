@@ -2,126 +2,43 @@
   "Series": [
     {
       "Datatypes": [
-        "string",
-        "string",
-        "double",
-        "dateTime:RFC3339",
-        "string",
-        "string",
-        "string",
-        "string",
-        "string",
-        "string"
+        "dateTime:RFC3339", "dateTime:RFC3339", "dateTime:RFC3339",
+        "double", "string", "string"
       ],
-      "Columns": [
-        "_measurement",
-        "_field",
-        "_value",
-        "_time",
-        "vdc",
-        "namespace",
-        "operation",
-        "status_class",
-        "quantile",
-        "unit"
-      ],
+      "Columns": ["_start", "_stop", "_time", "_value", "_field", "_measurement"],
       "Values": [
-        [
-          "cq_performance_throughput",
-          "read",
-          "125.5",
-          "2026-01-15T11:59:00Z",
-          "vdc-a",
-          "",
-          "",
-          "",
-          "",
-          "MB/s"
-        ],
-        [
-          "cq_performance_throughput",
-          "write",
-          "64",
-          "2026-01-15T11:59:00Z",
-          "vdc-a",
-          "",
-          "",
-          "",
-          "",
-          "MB/s"
-        ],
-        [
-          "cq_performance_latency",
-          "read",
-          "12.5",
-          "2026-01-15T11:59:00Z",
-          "vdc-a",
-          "",
-          "GET",
-          "",
-          "p99",
-          "ms"
-        ],
-        [
-          "cq_performance_transaction",
-          "succeed_request_counter",
-          "120",
-          "2026-01-15T11:59:00Z",
-          "vdc-a",
-          "",
-          "GET",
-          "2xx",
-          "",
-          "count"
-        ],
-        [
-          "cq_performance_throughput",
-          "read",
-          "10",
-          "2026-01-15T11:59:00Z",
-          "vdc-a",
-          "namespace-a",
-          "",
-          "",
-          "",
-          "MB/s"
-        ],
-        [
-          "cq_performance_throughput",
-          "write",
-          "5",
-          "2026-01-15T11:59:00Z",
-          "vdc-a",
-          "namespace-a",
-          "",
-          "",
-          "",
-          "MB/s"
-        ],
-        [
-          "cq_performance_latency",
-          "write",
-          "7",
-          "2026-01-15T11:59:00Z",
-          "vdc-a",
-          "namespace-a",
-          "PUT",
-          "",
-          "p50",
-          "ms"
-        ],
-        [
-          "cq_performance_error_ns",
-          "server_error_counter",
-          "3",
-          "2026-01-15T11:59:00Z",
-          "vdc-a",
-          "namespace-a",
-          "PUT",
-          "5xx",
-          "",
-          "count"
-        ]
+        ["2026-01-15T11:50:00Z", "2026-01-15T12:00:00Z", "2026-01-15T11:59:00Z", "125500000", "total_read_requests_size", "cq_performance_throughput"],
+        ["2026-01-15T11:50:00Z", "2026-01-15T12:00:00Z", "2026-01-15T11:59:00Z", "64000000", "total_write_requests_size", "cq_performance_throughput"],
+        ["2026-01-15T11:50:00Z", "2026-01-15T12:00:00Z", "2026-01-15T11:59:00Z", "120", "succeed_request_counter", "cq_performance_transaction"],
+        ["2026-01-15T11:50:00Z", "2026-01-15T12:00:00Z", "2026-01-15T11:59:00Z", "5", "failed_request_counter", "cq_performance_transaction"],
+        ["2026-01-15T11:50:00Z", "2026-01-15T12:00:00Z", "2026-01-15T11:59:00Z", "2", "user_errors", "cq_performance_error"],
+        ["2026-01-15T11:50:00Z", "2026-01-15T12:00:00Z", "2026-01-15T11:59:00Z", "3", "system_errors", "cq_performance_error"]
+      ]
+    },
+    {
+      "Datatypes": [
+        "dateTime:RFC3339", "dateTime:RFC3339", "dateTime:RFC3339",
+        "double", "string", "string", "string"
+      ],
+      "Columns": ["_start", "_stop", "_time", "_value", "_field", "_measurement", "id"],
+      "Values": [
+        ["2026-01-15T11:50:00Z", "2026-01-15T12:00:00Z", "2026-01-15T11:59:00Z", "12.5", "p50", "cq_performance_latency", "ttfb_read"],
+        ["2026-01-15T11:50:00Z", "2026-01-15T12:00:00Z", "2026-01-15T11:59:00Z", "25", "p99", "cq_performance_latency", "ttfb_read"],
+        ["2026-01-15T11:50:00Z", "2026-01-15T12:00:00Z", "2026-01-15T11:59:00Z", "7", "p50", "cq_performance_latency", "ttlb_write"],
+        ["2026-01-15T11:50:00Z", "2026-01-15T12:00:00Z", "2026-01-15T11:59:00Z", "18", "p99", "cq_performance_latency", "ttlb_write"]
+      ]
+    },
+    {
+      "Datatypes": [
+        "dateTime:RFC3339", "dateTime:RFC3339", "dateTime:RFC3339",
+        "double", "string", "string", "string"
+      ],
+      "Columns": ["_start", "_stop", "_time", "_value", "_field", "_measurement", "namespace"],
+      "Values": [
+        ["2026-01-15T11:50:00Z", "2026-01-15T12:00:00Z", "2026-01-15T11:59:00Z", "40", "succeed_request_counter", "cq_performance_transaction_ns", "namespace-a"],
+        ["2026-01-15T11:50:00Z", "2026-01-15T12:00:00Z", "2026-01-15T11:59:00Z", "2", "failed_request_counter", "cq_performance_transaction_ns", "namespace-a"],
+        ["2026-01-15T11:50:00Z", "2026-01-15T12:00:00Z", "2026-01-15T11:59:00Z", "1", "user_errors", "cq_performance_error_ns", "namespace-a"],
+        ["2026-01-15T11:50:00Z", "2026-01-15T12:00:00Z", "2026-01-15T11:59:00Z", "1", "system_errors", "cq_performance_error_ns", "namespace-a"]
       ]
     }
   ]

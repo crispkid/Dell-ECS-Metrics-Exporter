@@ -18,6 +18,7 @@ const (
 	versionParser         = "dell-four-part-with-optional-build-suffix"
 	fixtureClassSynthetic = "synthetic-document-derived"
 	fixtureClassSandbox   = "redacted-sandbox-derived"
+	featurePolicyShared   = "shared-live-any-target-version"
 	versionDiscoveryAPI   = "version-discovery"
 )
 
@@ -83,11 +84,13 @@ type KnownIssue struct {
 }
 
 type Evidence struct {
-	Status                string   `json:"status"`
-	OfficialSources       []string `json:"official_sources"`
-	APIReferenceAccess    string   `json:"api_reference_access"`
-	FixtureClassification string   `json:"fixture_classification"`
-	SandboxCertified      bool     `json:"sandbox_certified"`
+	Status                      string   `json:"status"`
+	OfficialSources             []string `json:"official_sources"`
+	APIReferenceAccess          string   `json:"api_reference_access"`
+	FixtureClassification       string   `json:"fixture_classification"`
+	FeatureValidationPolicy     string   `json:"feature_validation_policy"`
+	SharedValidatedCapabilities []string `json:"shared_validated_capabilities"`
+	SandboxCertified            bool     `json:"sandbox_certified"`
 }
 
 // Supports reports whether the four-part product version lies in the profile's
@@ -198,6 +201,15 @@ func (p *Profile) validate() error {
 	if err := p.Evidence.validate(); err != nil {
 		return err
 	}
+	for _, capability := range p.Evidence.SharedValidatedCapabilities {
+		support, exists := p.Capabilities[capability]
+		if !exists {
+			return fmt.Errorf("shared validated capability %q is not declared", capability)
+		}
+		if support == SupportUnavailable {
+			return fmt.Errorf("shared validated capability %q is unavailable", capability)
+		}
+	}
 	return nil
 }
 
@@ -289,6 +301,24 @@ func (e Evidence) validate() error {
 	if e.FixtureClassification != fixtureClassSynthetic &&
 		e.FixtureClassification != fixtureClassSandbox {
 		return fmt.Errorf("evidence.fixture_classification %q is unsupported", e.FixtureClassification)
+	}
+	if e.FeatureValidationPolicy != featurePolicyShared {
+		return fmt.Errorf(
+			"evidence.feature_validation_policy must be %q", featurePolicyShared,
+		)
+	}
+	if len(e.SharedValidatedCapabilities) == 0 {
+		return fmt.Errorf("evidence.shared_validated_capabilities must not be empty")
+	}
+	capabilities := make(map[string]struct{}, len(e.SharedValidatedCapabilities))
+	for _, capability := range e.SharedValidatedCapabilities {
+		if strings.TrimSpace(capability) == "" {
+			return fmt.Errorf("shared validated capability must not be empty")
+		}
+		if _, exists := capabilities[capability]; exists {
+			return fmt.Errorf("duplicate shared validated capability %q", capability)
+		}
+		capabilities[capability] = struct{}{}
 	}
 	if e.SandboxCertified {
 		if e.Status != "sandbox-verified" {

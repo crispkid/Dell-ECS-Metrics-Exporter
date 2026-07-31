@@ -37,11 +37,16 @@ Profile 或修正後 Exporter integration 已通過。
 - `-1` quota 轉為 `configured=false`、Inventory `null` 且不輸出 metric。
 - Flux parser 按 `Columns` 對應 `Values`，不可假定欄位順序。
 - Flux numeric value 可為字串或 number。
+- Node CPU、memory、network 與 conditional disk fixtures 分別模擬 ECS
+  `keep()` 後的回應，確保 `cpu`、`interface`、`path` 維度不會因合併查詢遺失。
 - 3.7／3.8.0 interval-rate capability 必須停用。
 - 3.8.1 的 range fixture 只能打開 contract path，不能取代 live range-boundary test。
 - `secretKeys` 永遠不出現在 fixture 或 internal model。
-- Performance fixture 保留 VDC/Namespace scope，throughput/latency/window count
-  必須映射 Gauge，不得展開為 Bucket。
+- Performance fixture 保留來源 VDC/Namespace scope；VDC throughput/latency 與
+  VDC/Namespace request rates 必須映射 Gauge，不得展開為 Bucket。VDC latency
+  以 `id=ttfb_read`／
+  `id=ttlb_write` 區分讀寫；Namespace 只使用文件明列帶 `namespace` tag 的
+  transaction/error measurements，不捏造 Namespace throughput/latency。
 - Bucket billing batch fixture 必須以 Namespace/name 識別 item；sample time 不得
   覆蓋 Bucket inventory 的 last-modified timestamp。
 - ECS CE 3.8.0.3 batch request 使用 `{"id":[bucket names...]}`，response envelope

@@ -7,6 +7,7 @@
 - REST API ZIP review: pending authenticated Dell Support access
 - Sandbox certification: partial ECS CE 3.8.0.3 Management API run; not certified
 - Live record: `validation/ecs-ce-3.8.0.3-2026-07-25.md`
+- Shared feature validation: `validated-shared` under `feature-validation.md`
 
 ## Official Sources
 
@@ -18,15 +19,15 @@
 
 | Mapping family | Status | ECS 3.8.0 decision |
 |---|---|---|
-| Authentication/version discovery | CE-live-observed | Login/whoami/logout and exact build selection passed with `SYSTEM_MONITOR` |
-| Cluster/node inventory and health | CE-live-observed | Top-level capacity and HAL Node health passed; Flux resources unavailable in CE |
-| Namespace inventory/quota/billing | CE-live-observed | Top-level unset quota and non-zero `9765.625 KB`/four-object billing were observed |
-| Bucket inventory/quota/billing | partial CE-live-observed | Corrected Exporter returned three Bucket Inventory items and matching quota/billing metrics；batch HTTP 200 and collector succeeded repeatedly |
-| Flux latest snapshot | documented | Use `last()` only |
+| Authentication/version discovery | validated-shared | Login/whoami/logout and exact build selection passed with `SYSTEM_MONITOR` |
+| Cluster/node inventory and health | validated-shared | Top-level capacity and HAL Node health passed; Flux resource evidence inherited from appliance 3.8.1.1 |
+| Namespace inventory/quota/billing | validated-shared | Top-level unset quota and non-zero `9765.625 KB`/four-object billing were observed |
+| Bucket inventory/quota/billing | validated-shared | Corrected Exporter returned three Bucket Inventory items and matching quota/billing metrics；batch HTTP 200 and collector succeeded repeatedly |
+| Flux latest snapshot | validated-shared | Use `last()` only; appliance evidence is shared across target versions |
 | Flux interval rates/deltas | unsupported for this Profile | Same known range defect as ECS 3.7 |
-| VDC/namespace performance | conditional | No interval-derived rates until exact build passes |
+| VDC/namespace performance | validated-shared, conditional | Query/parser feature is validated; interval-derived rates stay unavailable |
 | Bucket performance | unsupported | No bucket-scope evidence |
-| Replication/recovery | candidate-inherited | Verify status/progress fields |
+| Replication/recovery | pending | No target version has live status/lag/recovery field evidence |
 
 ## Host Header Contract
 
@@ -74,7 +75,9 @@ The corrected Exporter live rerun passed with three Buckets, four objects and
 node-resources query returned 503. This is still partial exact-build evidence, not Profile
 certification.
 
-## Certification Gaps
+## Remaining Version-Specific Assurance
+
+These items do not change the shared feature validation state:
 
 - Compare ECS 3.8.0 REST API ZIP with the common contract.
 - Test direct, proxy and load-balanced Management API calls.
@@ -83,3 +86,12 @@ certification.
 - Verify capacity/quota GB and billing MB/GB/TB multipliers separately; the live run proves
   only billing KB.
 - Test replication/recovery and representative failure/timeout/token-expiry scenarios.
+
+## 2026-08-01 Validation Position
+
+The official ECS 3.8 index exposes separate 3.8.0 Administration, Monitoring and REST API
+documents, and Dell KB 000211906 keeps interval-derived Flux rates disabled for this Profile.
+The shared split mapping passed the `ecs-3.8.0` fixture replay. ECS CE 3.8.0.3 still returned
+Flux HTTP 503, but ECS-011 inherits the successful appliance 3.8.1.1 latest-snapshot feature
+evidence. A [redacted appliance probe](flux-probe.md) on an exact 3.8.0 build is optional
+version-specific regression evidence; the documented interval-rate prohibition remains binding.

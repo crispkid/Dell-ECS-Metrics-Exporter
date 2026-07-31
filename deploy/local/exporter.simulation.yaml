@@ -1,0 +1,61 @@
+server:
+  listenAddress: "127.0.0.1:8080"
+
+prometheus:
+  path: /metrics
+  protected: false
+
+cache:
+  staleTolerance: 30s
+  maxStale: 2m
+
+collector:
+  defaultTimeout: 5s
+  retry:
+    maxAttempts: 2
+    initialBackoff: 100ms
+    maxBackoff: 500ms
+  rateLimit:
+    requestsPerSecond: 100
+    burst: 20
+  intervals:
+    cluster: 5s
+    node: 5s
+    performance: 5s
+    replication: 5s
+    recovery: 5s
+    namespace: 5s
+    bucket: 5s
+  concurrency:
+    maxConcurrentRequestsPerCluster: 4
+    bucketPageSize: 500
+  jitterRatio: 0
+
+security:
+  inventoryApi:
+    enabled: false
+
+ecs:
+  clusters:
+    - name: synthetic-ecs
+      site: local-lab
+      environment: test
+      endpoint: https://127.0.0.1:4443
+      username: ${ECS_MOCK_USERNAME}
+      password: ${ECS_MOCK_PASSWORD}
+      tls:
+        verify: false
+      capabilities:
+        enabledConditional:
+          - node_service_process
+          - recovery_progress
+      nodeResources:
+        networkInterfaces:
+          - public
+        maxNetworkInterfaces: 4
+        preferBondInterfaces: true
+      replication:
+        groups:
+          - rg-a
+        links:
+          - rg-link-a

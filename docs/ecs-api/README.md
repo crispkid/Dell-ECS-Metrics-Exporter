@@ -7,18 +7,25 @@
 - `ecs-3.7.md`：ECS 3.7.x 的差異、已知 Flux 問題與待驗證項目。
 - `ecs-3.8.0.md`：ECS 3.8.0.x 的 Flux 與 Host Header 差異。
 - `ecs-3.8.1.md`：ECS 3.8.1.x 的 Flux 修正與保留風險。
+- `feature-validation.md`：ECS-011 跨版本共用功能驗證政策與狀態矩陣。
 - `validation/`：去識別化的真實環境驗證紀錄；每份紀錄必須明列通過範圍與未覆蓋
   的 certification gates。
 
 Mapping 狀態：
 
 - `documented`：可追溯至已讀取的 Dell 官方文件。
+- `validated-shared`：該功能已在任一目標 ECS 版本用 production path 完成真實
+  CE/appliance 驗證，依 ECS-011 視為四個目標 Profile 的共用功能均已驗證。
 - `candidate-inherited`：從較早版本繼承的候選契約，尚未用該版本 REST ZIP 或真機證實。
 - `CE-live-observed`：已在 exact ECS CE build 觀察到 response 與 Exporter 行為；
   只適用明列範圍，不代表正式設備或完整 Profile 認證。
 - `CE-blocked`：CE 環境未提供或無法執行該來源；必須在正式設備另行驗證。
 - `unsupported`：官方來源沒有該 scope/語意，禁止輸出。
 - `sandbox-pending`：文件 mapping 已建立，但不能宣稱真機相容。
+
+`validated-shared` 是功能級狀態。已知版本差異、`unavailable` capability、exact-build
+執行紀錄與完整 Profile certification 不會被它覆寫。詳細規則見
+[Cross-Version Feature Validation](feature-validation.md)。
 
 Committed fixtures 分成 `synthetic-document-derived` 與
 `redacted-sandbox-derived`。前者適合 parser/contract tests；後者只保留 exact

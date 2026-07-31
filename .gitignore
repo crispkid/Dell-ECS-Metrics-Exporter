@@ -3,6 +3,7 @@
 /coverage/
 /dist/
 /test-results/
+/ecs-flux-probe*.json
 /.tmp/
 /tmp/
 *.test

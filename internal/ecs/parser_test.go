@@ -269,14 +269,39 @@ func TestPerformanceBatchBillingAndNodeStatusMappings(t *testing.T) {
 	performance, err := ParseFluxPerformance(
 		fixture(t, "common", "flux-vdc-performance.json"), "alpha", "fallback-vdc", now,
 	)
-	if err != nil || len(performance) != 8 {
+	if err != nil || len(performance) != 12 {
 		t.Fatalf("performance = %#v err=%v", performance, err)
 	}
 	if performance[0].Metric != model.PerformanceReadThroughput ||
 		performance[0].Value != 125_500_000 ||
-		performance[2].Metric != model.PerformanceLatency ||
-		math.Abs(performance[2].Value-0.0125) > 1e-12 {
+		performance[5].Metric != model.PerformanceLatency ||
+		math.Abs(performance[5].Value-0.0125) > 1e-12 {
 		t.Fatalf("performance conversion = %#v", performance)
+	}
+	var official []model.Performance
+	for _, name := range []string{
+		"flux-vdc-core-performance.json",
+		"flux-vdc-latency.json",
+		"flux-namespace-performance.json",
+	} {
+		values, parseErr := ParseFluxPerformance(
+			fixture(t, "common", name), "alpha", "fallback-vdc", now,
+		)
+		if parseErr != nil {
+			t.Fatalf("%s: %v", name, parseErr)
+		}
+		official = append(official, values...)
+	}
+	if len(official) != 12 ||
+		official[0].Metric != model.PerformanceReadThroughput ||
+		official[2].StatusClass != "2xx" ||
+		official[3].StatusClass != "4xx" ||
+		official[4].StatusClass != "5xx" ||
+		official[5].Operation != "READ" ||
+		official[5].Quantile != "0.5" ||
+		math.Abs(official[5].Value-0.0125) > 1e-12 ||
+		official[9].Namespace != "namespace-a" {
+		t.Fatalf("official performance mapping = %#v", official)
 	}
 
 	billings, err := ParseBucketBillings(fixture(t, "common", "bucket-billing-batch.json"))
@@ -308,6 +333,21 @@ func TestPerformanceBatchBillingAndNodeStatusMappings(t *testing.T) {
 		statuses["node-a"].Services[0].Health != 0 ||
 		statuses["node-a"].Services[1].Health != 1 {
 		t.Fatalf("node statuses = %#v err=%v", statuses, err)
+	}
+}
+
+func TestFluxNullSeriesPlaceholderIsAnEmptyResult(t *testing.T) {
+	t.Parallel()
+	payload := []byte(`{"Series":[{"Datatypes":null,"Columns":null,"Values":null}]}`)
+	resources, err := ParseFluxNodeResources(payload)
+	if err != nil || len(resources) != 0 {
+		t.Fatalf("node resources = %#v err=%v", resources, err)
+	}
+	performance, err := ParseFluxPerformance(
+		payload, "alpha", "vdc-a", time.Now().UTC(),
+	)
+	if err != nil || len(performance) != 0 {
+		t.Fatalf("performance = %#v err=%v", performance, err)
 	}
 }
 

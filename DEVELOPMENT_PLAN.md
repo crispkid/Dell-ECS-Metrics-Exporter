@@ -1,5 +1,145 @@
 # Development Plan
 
+## ECS-012 v1.0.0-rc.1 release
+
+### Scope and Decision
+
+以 `v1.0.0-rc.1` 結束 repository-owned V1 開發並發布 GitHub Pre-release。RC 保留
+deterministic、race、container、Kubernetes schema、合成規模、dependency/license、
+雙架構 image scan、SBOM、signing 與 OCI provenance；private RC 缺少 GitHub-native
+attestation 支援時發布 signed boundary asset，stable 仍要求 native attestation。只有帶 prerelease suffix 的 tag
+可略過正式 ECS/CE、deployed E2E 與 deployed performance。Stable tag 仍須通過全部
+production gates。
+
+### Implementation Plan
+
+1. 新增 fail-closed tag classifier 與 workflow RC/stable 分流。
+2. 建立版本化 release notes、RC checklist、changelog 與安裝/status 文件。
+3. 完成 Harness、race、release policy、secret 與 full-diff review。
+4. 提交、建立 `v1.0.0-rc.1` tag、push 並觀察 release workflow。
+5. 只有 signed artifacts、GitHub Pre-release 與 GHCR publication 可觀察時才回報發布完成。
+
+### Approval Record
+
+- Gate 2 Status: user explicitly selected and authorized `v1.0.0-rc.1` publication
+- RC publication authorization: granted on 2026-08-01
+- Stable Gate 4 Status: not approved; stable external evidence and named reviewers remain pending
+
+### Verification Status
+
+- Local Harness self-test/doctor/verify, 84.7% coverage, `govulncheck`, fresh race,
+  synthetic target-scale, actionlint, RC archive/Helm build, checksum and secret/diff checks
+  passed. Commit/tag and GitHub publication evidence remain pending; see `plans/ECS-012.md`.
+
+## ECS-011 Cross-version shared feature validation
+
+### Scope and Decision
+
+依使用者決策，同一 Exporter 功能只要在任何一個目標 ECS 版本用 production path
+完成真實驗證，就視為四個 Profile 都已驗證。已知版本差異、`unavailable` 與從未在
+任何版本取得 live 欄位的功能維持個別狀態；exact-build execution 與完整 Profile
+certification 不偽造、不外推。
+
+### Implementation Plan
+
+1. 在 Profile evidence 新增共享驗證 policy 與 capability 清單。
+2. Loader 拒絕不存在或 `unavailable` 的共享 capability。
+3. 建立中央功能矩陣並更新四版本 mapping、README、規格與 release policy。
+4. 保留 Flux interval、Host Header 與 unsupported scope 的版本差異。
+5. 執行 targeted、race 與完整 Harness。
+
+### Approval Record
+
+- Gate 2 Status: user explicitly directed cross-version feature validation
+- Gate 4 Status: not approved; delivery and named reviewer gates remain pending
+
+### Verification Status
+
+- Four Profile shared lists, negative policy/unavailable tests, release evidence expression,
+  fresh race and full Harness passed. Coverage is 84.7%; no known Go vulnerabilities were found.
+
+## ECS-010 Portable read-only Flux compatibility validation
+
+### Scope and Decision
+
+ECS-010 在只有 ECS 3.8.1.1 實體設備、其他版本只有 ECS CE 的限制下，採用三層
+證據：官方文件 contract reconciliation、四 Profile fixture replay、以及可交付給
+exact-build appliance 管理者執行的去識別化唯讀 Probe。CE/fixture 不替代 appliance
+Flux；Profile certification 狀態不因本 change 改變。
+
+### Implementation Plan
+
+1. 比對 Dell 3.6 Flux/Performance 文件與 3.7/3.8 documentation index/known issue。
+2. 建立 `internal/fluxprobe` 與 `cmd/ecs-flux-probe`，重用 production client、Profile、
+   collector、parser 與 cache mapping。
+3. 限制 report 只含 exact build、Profile/policy、safe error/HTTP status 與 series count；
+   省略所有 identity、secret、endpoint、raw response/value。
+4. Replay 3.6、3.7、3.8.0、3.8.1 fixtures，加入 empty window、503/redaction 與 Disk
+   allowlist regression。
+5. 將 Probe 加入一般/release build並同步支援矩陣、mapping、test 與操作文件。
+6. 執行 deterministic/race/Harness checks；原規劃的 3.6/3.7/3.8.0 report requirement
+   已由 ECS-011 改為 optional version-specific regression evidence。
+
+### Approval Record
+
+- Gate 2 Status: user accepted the layered validation and portable probe recommendation
+- Gate 4 Status: not approved; exact-build appliance evidence and named reviewers remain pending
+
+### Verification Status
+
+- Four-profile fixture replay passed expected Profile selection, version-specific interval
+  policy, split Node/Performance counts, all-null empty handling, 503 redaction and Disk guard.
+- Local synthetic HTTPS calibration passed real client login/query/logout and emitted only the
+  redacted report contract. Fresh race and the complete required Harness passed at 84.7%
+  coverage; the security stage found no Go vulnerabilities.
+- Deterministic release build completed with both `ecs-exporter` and `ecs-flux-probe` in the
+  Linux archive. Deployment checks used documented strict static fallbacks where local tools
+  were unavailable.
+- Exact ECS 3.6/3.7/3.8.0 appliance Probe reports are not available. ECS-011 later promoted
+  qualifying shared functions without inventing exact-build Profile certification.
+
+## ECS-009 ECS 3.8.1.1 Flux and TLS compatibility correction
+
+### Scope and Decision
+
+ECS-009 依授權實體 ECS 3.8.1.1 唯讀結果修正 Node resources 與 Performance
+Flux contract，並依使用者決策允許所有 environment 明確設定
+`tls.verify: false`。預設驗證與 `caFile` 支援不變；停用驗證必須 WARN。
+
+### Implementation Plan
+
+1. 移除 production TLS false validation prohibition，加入不含 endpoint 的 startup WARN。
+2. 將 CPU、Memory、Network 與 conditional Disk 拆成 ECS 支援的精確
+   `filter`/`keep`/`last` queries，全部成功後原子合併。
+3. 將 VDC core、latency、Namespace request rates 分開查詢；只接受官方與實體
+   共同證實的 measurement/field/tag。
+4. 移除未證實的 Namespace throughput/latency public families，修正 rate/unit/status。
+5. 補 fixtures、parser/collector/metrics/mock tests、相容性文件與 partial-live record。
+6. 執行 Harness、race 與 corrected Exporter appliance rerun；保留 certification gate。
+
+### Approval Record
+
+- Gate 2 Status: user explicitly approved TLS verification as optional and required all other fixes
+- Gate 4 Status: not approved; formal certification and named reviewers remain pending
+
+### Verification Status
+
+- Corrected Exporter selected `ecs-3.8.1` for exact appliance build
+  `3.8.1.1.140118.8d698782e5d`; readiness was `UP`.
+- Five CPU, five memory-used, five memory-total, ten network-receive and ten
+  network-transmit series were exported; 32 current metric families passed
+  `metricscheck`.
+- Performance and Node split collectors completed repeatedly. The final
+  zero-load window returned no VDC core or Namespace rows; the ECS all-null
+  placeholder was accepted as an empty result.
+- Race, lint, format, typecheck, tests, 84.6% coverage, build, CI policy and
+  deployment checks passed. The required security refresh stopped because the
+  external vulnerability database could not be resolved, so the full Harness
+  handoff did not pass.
+- The redacted appliance record is
+  `docs/ecs-api/validation/ecs-appliance-3.8.1.1-2026-07-30.md`. Formal
+  certification and Gate 4 remain pending.
+
 ## ECS-008 Production readiness and Bare Metal delivery
 
 ### Scope and Decision

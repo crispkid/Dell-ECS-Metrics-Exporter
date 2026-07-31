@@ -86,6 +86,26 @@
     ],
     "api_reference_access": "listed-by-dell-login-required",
     "fixture_classification": "synthetic-document-derived",
+    "feature_validation_policy": "shared-live-any-target-version",
+    "shared_validated_capabilities": [
+      "authentication",
+      "version_discovery",
+      "cluster_health",
+      "cluster_capacity",
+      "node_inventory",
+      "node_health",
+      "node_cpu_memory",
+      "node_network_counters",
+      "namespace_inventory",
+      "namespace_capacity",
+      "namespace_quota",
+      "namespace_performance",
+      "bucket_inventory",
+      "bucket_capacity",
+      "bucket_quota",
+      "vdc_performance",
+      "flux_latest_snapshot"
+    ],
     "sandbox_certified": false
   }
 }

@@ -1,15 +1,15 @@
 # Dell ECS API Mapping Specification
 
 - Version: 1.1 working contract
-- Active Change: ECS-008
-- Status: Runtime mappings implemented; ECS CE 3.8.0.3 and 3.8.1.4 Management partially live-verified; certification pending
+- Active Change: ECS-011
+- Status: Shared functions validated across all four target Profiles; version-specific and delivery gates remain separate
 - Owner: Project Maintainer
 
 ## Purpose
 
 本文件定義 Dell ECS API 與 Exporter internal model、Prometheus metrics、Inventory
-API 之間的可驗證 mapping 契約。它不以範例或推測取代 Dell 官方文件。每一個真實
-adapter 必須先完成本文件對應紀錄，並以目標版本 sandbox 與去識別化 fixture 驗證。
+API 之間的可驗證 mapping 契約。它不以範例或推測取代 Dell 官方文件。共用功能採
+`shared-live-any-target-version`；版本差異仍由 Profile 與對應官方來源約束。
 
 ## Current Decision
 
@@ -18,25 +18,60 @@ adapter 必須先完成本文件對應紀錄，並以目標版本 sandbox 與去
 `docs/ecs-api/`；合成、去識別化 fixtures 定義於 `testdata/ecs/`。
 
 ECS 3.6 的 Management API 與 Flux mapping 已用 Dell 官方 REST API Reference 與
-Monitoring Guide 建立文件證據。ECS 3.7、3.8.0、3.8.1 的官方 REST API ZIP 目前需要
-Dell Support 登入，本儲存庫尚未完成內容比對，因此其 Management API mapping 標為
-`candidate-inherited`。ECS CE 3.8.0.3 已取得部分隔離 Management API evidence，
+Monitoring Guide 建立文件證據。ECS 3.7、3.8.0、3.8.1 的官方 REST API ZIP 仍可
+補強版本差異。依 ECS-011，任一 target version 的 qualifying live evidence 可讓相同
+production-path 功能在四個 Profile 標為 `validated-shared`。ECS CE 3.8.0.3 已取得
+隔離 Management API evidence，
 包括非空 Bucket 的 quota/billing envelope、`{"id":[bucket names...]}` batch
 contract、request-body/status matrix、known-size billing KB multiplier 與修復後
 三 Bucket refresh；但缺少正式版 Flux、REST ZIP、replication 與其餘 failure
-gates，因此不能宣稱整個 Profile 相容或把 `tested_builds` 填入 Profile。
+gates；這些缺口不撤銷已驗證的共用功能，但仍不得填入未執行的 `tested_builds`。
 
 ECS CE 3.8.1.4 exact build `3.8.1.4.140200.8103892f11b` 另已驗證 Profile
 selection、Management login/whoami/logout、Cluster/Node、Namespace/Bucket
 inventory/quota/billing、known-size KB conversion、Inventory authentication 與
 Prometheus exposition。CE Flux external query 仍回 HTTP 503，單 VDC RG 也沒有
-link status/RPO；因此 Node resources、Performance、Flux range boundary 與
-multi-VDC replication/recovery 仍不能視為已驗證。
+link status/RPO。Node resources 與 Performance 已由 appliance 3.8.1.1 提供共享功能
+證據；Flux range 與 replication/recovery 因未在任何版本取得必要 live 欄位而 pending。
+
+授權實體 ECS exact build `3.8.1.1.140118.8d698782e5d` 已完成唯讀 partial-live
+探測。Management collectors 成功，Flux endpoint 可用；實測證明合併 Node query
+會丟失 `cpu`/`interface`，而分開 `keep()` queries 可取得五個 Node 的 CPU、
+Memory 與兩個 Network interface。Performance 實測欄位符合 Dell Monitoring
+Guide：VDC core 沒有 scope tag、latency 使用 `id=ttfb_read|ttlb_write`，
+Namespace 只有 transaction/error measurements 帶 `namespace`。ECS-009 據此
+修正 query/mapping。該環境使用無法與管理 IP 匹配的自簽憑證與管理員帳號，
+且尚未完成 controlled failure、range boundary、負載或具名 review，因此不填入
+`tested_builds`、不宣稱 Profile certified。
 
 Mock/fixture tests 只能證明 parser、mapping 與 failure policy；不能證明真實
 integration。未知版本預設拒絕，且不得把最接近的已知 Profile 當成靜默 fallback。
-ECS-008 沒有變更 API URI/schema/unit mapping；它只新增受保護的 exact-build
-integration/E2E gate 與 production evidence boundary。
+ECS-009 是對未經真機證實的 Flux schema 契約所做的 corrective change；移除
+不存在的 Namespace throughput/latency mapping，並保留 ECS-008 受保護的
+exact-build integration/E2E gate 與 production evidence boundary。
+
+ECS-010 完成 2026-08-01 官方文件重新比對與四 Profile fixture replay，並新增
+`ecs-flux-probe`。Probe 只執行既有 read-only Management/Flux contract，輸出 exact
+build、Profile/policy、check status 與 series count；endpoint、credential/token、
+resource identity、raw response 與 sample value 一律省略。3.6 replay 與官方文件一致，
+3.7/3.8.0/3.8.1 replay 只證明 common mapping regression；在 exact appliance report
+與正式 review 完成前，Profile evidence/certification 欄位保持不變。
+
+ECS-011 將功能狀態與 exact-build certification 分離。Machine-readable Profile 以
+`feature_validation_policy=shared-live-any-target-version` 和
+`shared_validated_capabilities` 記錄共享驗證；完整來源與例外見
+`docs/ecs-api/feature-validation.md`。版本特定 Flux/Host policy、`unavailable`
+capability 與未驗證功能不會因繼承而改變。
+
+## Shared Feature Validation Policy
+
+- 任一目標 ECS 版本以 production client/collector/parser 完成的真實 CE/appliance
+  功能測試，視為四個目標 Profile 的共同功能證據。
+- Exact-build Probe、REST ZIP 與 sandbox certification 是額外版本 assurance，不是
+  `validated-shared` 的必要條件。
+- `tested_builds` 只記實際執行 build；不得為了共享狀態填入其他版本。
+- 共享功能清單目前排除 Node service/process、Disk、Flux interval range、replication
+  status/lag 與 recovery progress，因為沒有任何目標版本提供 qualifying live evidence。
 
 ## Preconditions for Sandbox Certification
 
@@ -66,7 +101,7 @@ header、私人 endpoint 或未遮罩 response body。
 | Field | Required content |
 |---|---|
 | Mapping ID | 穩定 ID，例如 `MAP-CLUSTER-INFO-001` |
-| ECS version/build | 已驗證的精確版本；不得只寫「latest」 |
+| ECS version/build | qualifying evidence 的來源版本，以及是否依 ECS-011 跨版本共享 |
 | Official source | 官方文件名稱、版本與章節或受控連結 |
 | Logical name | 不含敏感 URL 的穩定 logical API name |
 | HTTP contract | Method、相對 URI、content type、success codes |
@@ -89,17 +124,17 @@ header、私人 endpoint 或未遮罩 response body。
 
 | Mapping family | Required domain | Exporter consumer | Default poll | Current evidence |
 |---|---|---|---:|---|
-| MAP-AUTH | Login、token lifecycle、logout/expiry | Authentication Manager | 依 token lifecycle | `MAP-AUTH-001`；3.6 documented，後續版本 candidate-inherited |
-| MAP-CLUSTER-INFO | VDC/cluster identity、health、version、resource counts | Cluster Collector、`/api/v1/clusters` | 60s | `MAP-CLUSTER-HEALTH-001`、`MAP-VERSION-001` |
-| MAP-CLUSTER-CAPACITY | total/used/available bytes | Cluster Collector、cluster metrics | 60s | `MAP-CLUSTER-CAPACITY-001`；ECS CE 3.8.0 top-level envelope observed；known-size unit gate pending |
-| MAP-NODE-INFO | node identity、health、state、CPU、memory、disk、service | Node Management/Resources Collectors、`/api/v1/nodes` | 60s | ECS CE 3.8.0 Management observed；Flux resource mapping production-pending |
-| MAP-NODE-NETWORK | receive/transmit values 與其累計語意 | Node Collector、node network metrics | 60s | Flux `net.bytes_recv/bytes_sent` 為 cumulative；保留 `interface` |
-| MAP-NAMESPACE | owner、capacity、quota、bucket/object count、replication、audit | Namespace Collector、`/api/v1/namespaces` | 300s | ECS CE 3.8.0 empty and four-object Namespace billing observed；billing KB known-size assertion passed |
-| MAP-BUCKET-INFO | identity、owner、capacity、objects、features、timestamps | Bucket Collector、`/api/v1/buckets` | 300s | ECS CE 3.8.0 namespace-scoped empty and corrected three-item Exporter refresh passed |
-| MAP-BUCKET-QUOTA | soft/hard quota 與未設定語意 | Bucket Collector、bucket quota metrics | 300s | `-1` unset documented；ECS CE 3.8.0 top-level configured 1/2 GB observed，GB multiplier still pending |
-| MAP-PERFORMANCE | throughput、latency、operation/status statistics 與 scope | Performance Collector、performance metrics | 60s | VDC/Namespace Flux documented；Bucket scope unsupported |
-| MAP-REPLICATION | group、source/target VDC、status、lag | Replication Collector、`/api/v1/replications` | 120s | Dashboard RG/RG link documented；lag derived |
-| MAP-RECOVERY | status、progress | Recovery Collector、replication/recovery inventory | 120s | conditional；必須保留 failover/bootstrap/recovery kind |
+| MAP-AUTH | Login、token lifecycle、logout/expiry | Authentication Manager | 依 token lifecycle | Login/token/logout `validated-shared`；expiry injection pending |
+| MAP-CLUSTER-INFO | VDC/cluster identity、health、version、resource counts | Cluster Collector、`/api/v1/clusters` | 60s | `validated-shared` |
+| MAP-CLUSTER-CAPACITY | total/used/available bytes | Cluster Collector、cluster metrics | 60s | `validated-shared`；known-size unit calibration remains assurance work |
+| MAP-NODE-INFO | node identity、health、state、CPU、memory、disk、service | Node Management/Resources Collectors、`/api/v1/nodes` | 60s | Inventory/health/CPU/Memory `validated-shared`；Disk/service pending |
+| MAP-NODE-NETWORK | receive/transmit values 與其累計語意 | Node Collector、node network metrics | 60s | `validated-shared`；`net.bytes_recv/bytes_sent` 保留 `interface` |
+| MAP-NAMESPACE | owner、capacity、quota、bucket/object count、replication、audit | Namespace Collector、`/api/v1/namespaces` | 300s | `validated-shared`；billing KB known-size assertion passed |
+| MAP-BUCKET-INFO | identity、owner、capacity、objects、features、timestamps | Bucket Collector、`/api/v1/buckets` | 300s | `validated-shared` |
+| MAP-BUCKET-QUOTA | soft/hard quota 與未設定語意 | Bucket Collector、bucket quota metrics | 300s | `validated-shared`；additional unit calibration remains assurance work |
+| MAP-PERFORMANCE | throughput、latency、operation/status statistics 與 scope | Performance Collector、performance metrics | 60s | VDC/Namespace supported mapping `validated-shared`；Bucket scope unavailable |
+| MAP-REPLICATION | group、source/target VDC、status、lag | Replication Collector、`/api/v1/replications` | 120s | pending；沒有 target version 的 live status/RPO fields |
+| MAP-RECOVERY | status、progress | Recovery Collector、replication/recovery inventory | 120s | pending；沒有 target version 的 live progress fields |
 
 ## Mapping Invariants
 
@@ -165,8 +200,9 @@ ECS 3.8.0 經 proxy/load balancer 時必須符合 accepted server names；3.8.1 
   group/link IDs。此限制避免發明 URI，也保留真機補證後擴充空間。
 - Recovery metric 保留 replication group、source/target VDC 與 operation kind，
   避免同一 group 有多個 link 時產生重複 Prometheus series。
-- 以上 implementation 已由 synthetic fixtures/mock transport 驗證，但沒有提升
-  `candidate-inherited` 或 sandbox evidence status。
+- 以上 implementation 已由 synthetic fixtures/mock transport 驗證；ECS-011 之後，
+  其中具有任一 target-version live evidence 的功能另提升為 `validated-shared`，完整
+  sandbox certification 狀態仍不變。
 
 ECS-005 另以隔離 ECS CE 3.8.0.3 觀察到並修正：
 
@@ -184,7 +220,8 @@ ECS-005 另以隔離 ECS CE 3.8.0.3 觀察到並修正：
 ECS-006 補完 fixture/component 可證實的 runtime mapping：
 
 - Performance Flux response 會嚴格解析 measurement/field/unit/scope/time，原子替換
-  VDC/Namespace cache，並輸出 throughput、latency、request/status-window Gauge。
+  VDC/Namespace cache。ECS-009 已將此舊 synthetic mapping 收斂為實體證實的
+  VDC throughput/latency/request-rate 與 Namespace request-rate Gauge。
 - Profile `conditional` capability 必須由每個 Cluster 的
   `capabilities.enabledConditional` 明列；`unavailable` 與 mixed-version interval
   rates 不可覆寫。

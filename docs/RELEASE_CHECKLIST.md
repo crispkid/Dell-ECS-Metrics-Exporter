@@ -22,11 +22,13 @@ Do not mark blocked or skipped checks as passed.
       DEGRADED is accepted only when the sole positive collector-error series
       is `node-resources`; its Flux 503 limitation is recorded as CE-only and
       not generalized.
-- [ ] Profile `tested_builds`/certification fields are changed only after formal
-      evidence and reviewer approval.
-- [ ] Before tagging, `ecs-3.8.1` records reviewed `3.8.1.4` certification,
-      redacted sandbox-derived fixtures, and the downloaded/reviewed API
-      reference; the release workflow then revalidates the exact appliance.
+- [ ] All required API functions are present in every Profile's
+      `shared_validated_capabilities` under the
+      `shared-live-any-target-version` policy.
+- [ ] Version-specific differences (`unavailable` capability, Flux interval
+      policy and Host Header behavior) remain enforced; exact-build smoke in the
+      release workflow validates the deployment rather than repeating shared
+      feature certification.
 - [ ] Unknown versions remain fail-closed and quota `null` semantics are
       preserved.
 
@@ -64,8 +66,9 @@ Do not mark blocked or skipped checks as passed.
 ## Deployment and operations
 
 - [ ] Production uses an immutable image digest or verified release archive.
-- [ ] TLS verification is enabled with the correct CA and a least-privilege ECS
-      monitor account.
+- [ ] TLS verification uses the correct CA, or an explicit self-signed-certificate
+      exception records the `tls.verify: false` risk, startup warning and
+      restricted network path; the ECS account is least privilege.
 - [ ] Inventory API is authenticated; exposure, reverse proxy, firewall, and
       NetworkPolicy are reviewed.
 - [ ] Kubernetes ingress selectors and DNS/ECS egress CIDRs are

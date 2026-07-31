@@ -1,9 +1,13 @@
 # Specification Changelog
 
-Active Change: ECS-008
+Active Change: ECS-012
 
 | Date | Change ID | Spec section | Reason | Compatibility/migration | Test impact | Approver |
 |---|---|---|---|---|---|---|
+| 2026-08-01 | ECS-012 | REQ-010–REQ-012、RC release policy、delivery docs | 使用者指定以 `v1.0.0-rc.1` 結束開發並發布；stable external evidence 尚未齊全，必須避免把 RC 誤標為 production approval | Backward-compatible delivery change：prerelease tag 可略過 stable-only ECS/deployed jobs，但保留 deterministic/race/container/schema/scan/SBOM/sign/OCI provenance 並標示 GitHub Pre-release；private RC 以 signed boundary 揭露 native attestation 平台限制，stable tag 門檻不變 | Tag classification、workflow stable guards/publish predicate、Harness/race/release build、secret/diff 與 external publication verification | 使用者明確授權 RC publication；沒有 stable Gate 4 或具名 reviewer 核准 |
+| 2026-08-01 | ECS-011 | REQ-012、feature evidence、release compatibility policy | 使用者決定任何功能只要在任一目標版本驗證過，即視為所有目標版本已驗證 | Pre-release evidence-policy change：新增 machine-readable shared capability list；保留版本差異、unavailable 與 exact-build execution truth | Profile policy/list validation、unavailable rejection、release shared-evidence policy、四版本文件一致性與 full Harness | 使用者明確要求採用此邏輯；沒有 production Gate 4 或具名 reviewer 核准 |
+| 2026-08-01 | ECS-010 | REQ-010、REQ-012、compatibility evidence/probe | 只有 ECS 3.8.1.1 實體設備，3.6/3.7/3.8.0 只有不具 production fabric/Flux 證明力的 CE；需要可由客戶/Dell/合作夥伴安全執行的替代驗證 | Backward-compatible 新增 `ecs-flux-probe` binary/report；不修改 Exporter metrics/API/Profile range，且不提升 `tested_builds`/`sandbox_certified` | 四 Profile production-path fixture replay、all-null、503/redaction、disk allowlist、CLI setup redaction；exact-build appliance reports 仍 pending | 使用者接受分層驗證建議並要求執行；沒有 production Gate 4 或具名 reviewer 核准 |
+| 2026-07-30 | ECS-009 | REQ-003、REQ-005、REQ-010、Flux/API mapping、metrics 9.4.1 | 實體 ECS 3.8.1.1 揭露合併 Node query 遺失維度與 synthetic Performance schema 不相容；使用者確認企業自簽憑證可停用 TLS 驗證，其餘問題必須修正 | Corrective pre-release contract change：Node/Performance 改為多個精確 query 後原子合併；移除未證實的 Namespace throughput/latency families；request Gauge 定義為 rates；production 明確允許 `tls.verify=false` 並 WARN | 新增 split-query fixtures、維度/欄位/parser、atomic failure、TLS production/warning、mock routing 與 ECS 3.8.1.1 read-only live rerun | 使用者明確核准 TLS 例外與其餘修正；沒有 production Gate 4 或具名 reviewer 核准 |
 | 2026-07-26 | ECS-008 | REQ-010–REQ-012、sections 19–21 production delivery | 使用者要求完成 Production 前工作並增加 Bare Metal | Backward-compatible 新增 systemd deployment、bounded NetworkPolicy values、release/SBOM/sign/provenance、live/E2E/performance fail-closed gates；不修改 metrics/Inventory schema 或 Profile certification | 新增 archive determinism、release policy、container/Kubernetes、synthetic/deployed scale、exact-build live/E2E 與 operations checks；外部 evidence 缺少仍阻擋 | 使用者授權實作；沒有 production Gate 4 或具名 reviewer 核准 |
 | 2026-07-26 | ECS-007 | REQ-004、REQ-009、REQ-012 ECS 3.8.0.3 Bucket compatibility | 非空 Bucket live follow-up 發現 top-level quota/single billing、batch request-body差異與 billing KB=1024 | Backward-compatible 保留 nested envelope；新增 top-level/plural envelope、`{"id":[...]}` batch body 與 narrow fallback；只修正 billing KB | 新增 envelope ambiguity、request matrix、non-empty batch/fallback/error-code、known-size unit regression；修復後 partial-live/race 通過，Harness 的外部漏洞資料庫存取未獲執行政策授權 | 使用者要求修復實測失敗項目；沒有 production Gate 4 或具名 reviewer 核准 |
 | 2026-07-26 | ECS-006 | REQ-002–REQ-005、REQ-008–REQ-010、REQ-012 runtime completeness | 使用者要求完成規格稽核列出的十項未實作／不完整項目 | Backward-compatible 新增 VDC/Namespace Gauge、node service Gauge、自我 telemetry 與 optional config；conditional/disk 預設關閉，stale domain 超時停止輸出 | 新增 Performance、capability、disk/service、inventory、stale、rate/jitter、network、batch billing、TB/response-size、per-domain refresh tests；live certification 仍 pending | 使用者授權完成十項；沒有 production Gate 4 或具名 reviewer 核准 |
@@ -12,6 +16,56 @@ Active Change: ECS-008
 | 2026-07-25 | ECS-003 | Implementation baseline、Health bootstrap、Profile selection、deployment verification | 固定 Go 1.26.5 並建立第一個可編譯、可測試的相容性核心與開發部署骨架 | 尚未新增 ECS domain metric/config/Inventory public contract；bootstrap readiness 明確維持 HTTP 503／`DOWN`，module path 在 remote 決定前暫定 | 新增 version/Profile/mixed selection、fixture integrity、HTTP bootstrap tests；Harness 啟用 8 個 required stages | 使用者要求開始準備開發；未記錄正式 Gate 2/Gate 4 核准 |
 | 2026-07-25 | ECS-002 | Compatibility、API Coverage/Mapping、Node/Bucket metrics、Profile/fixture contracts | 建立 ECS 3.6、3.7、3.8.0、3.8.1 四個版本 Profile、mapping 與 synthetic fixtures | 新增 `interface` label 至 node network counters；四個目標 Profile 明確不輸出未證實的 Bucket performance metrics；3.7/3.8.0 停用 Flux interval rates | 新增 Profile/manifest/schema/fixture contract cases、Flux range guard、Host Header 與 version matrix；產品 tests 仍待 Go 實作 | 尚未正式核准；責任角色為 Project Maintainer |
 | 2026-07-25 | ECS-001 | V1.0 全部章節、Requirement Index、Acceptance Criteria 與 API Mapping contract | 將使用者提供的產品與整合附件納入儲存庫，建立可追溯的 greenfield baseline | 新專案，沒有既有 runtime、metric、API、config 或資料需要 migration；未來變更受 Semantic Versioning 約束 | 建立 unit/component/integration/performance/security/deployment test design；目前只有文件與 Harness evidence | 尚未正式核准；責任角色為 Project Maintainer |
+
+## ECS-012 Notes
+
+- `vMAJOR.MINOR.PATCH-PRERELEASE` 由 release workflow 分類為 prerelease；GitHub Release
+  必須使用 Pre-release flag 與版本化 notes。
+- RC 仍執行 deterministic/race、container/schema、synthetic scale、source/license、
+  linux/amd64 + linux/arm64 image scan、SBOM、Sigstore 與 OCI provenance；private RC
+  缺少 GitHub-native attestation 支援時發布 signed boundary asset。
+- Exact ECS 3.8.1.4、CE 3.8.0.3、deployed E2E/performance 只對 prerelease tag skip；
+  stable tag 缺任一成功結果都不能 publish。
+- RC 不更新 `tested_builds`、`sandbox_certified`，也不代表 production Gate 4。
+
+## ECS-011 Notes
+
+- 功能級驗證採 `shared-live-any-target-version`，不再要求四個版本重複相同功能測試。
+- Shared validation 不覆寫 Flux interval、Host Header、`unavailable` 或未取得 live 欄位的
+  capability。
+- `tested_builds` 與 `sandbox_certified` 保持 exact-build／完整 Profile 語意。
+- Release policy 改檢查必要 shared capability set；正式 3.8.1.4 workflow 仍負責部署
+  smoke/E2E，而非重做每個共享功能的版本認證。
+
+## ECS-010 Notes
+
+- Dell ECS 3.6 官方 Flux 文件與 replacement guide 明列 external v2 query、
+  `monitoring_op`、CPU `usage_idle`/`cpu-total`、Memory 與 `keep()` tags，與目前 split
+  latest-snapshot contract 相符。
+- Dell 3.7/3.8 documentation indexes 與 KB 000211906 維持 version-specific interval
+  policy：3.7/3.8.0 unavailable，3.8.1 conditional。
+- `ecs-flux-probe` 使用相同 client/Profile/collector/parser，預設執行 Node 與
+  VDC/Namespace Performance 唯讀查詢；Disk 必須明列 filesystem allowlist。
+- Report 只保留 exact build、Profile/policy、safe check status 與 series count；
+  不保存 endpoint、credential/token、resource identity、raw response 或 value。
+- 四版本 replay 與 redaction regressions 是 synthetic evidence。沒有新增
+  `tested_builds` 或 sandbox certification，也不把 ECS CE 503 當作 appliance 結論。
+
+## ECS-009 Notes
+
+- 實體 exact build `3.8.1.1.140118.8d698782e5d` 回應證明 CPU、Memory、Network
+  必須分開 query 並以 `keep()` 保留 `cpu`/`interface`；所有子查詢成功後才替換
+  Node resource cache。
+- VDC core measurements 沒有 VDC tag；latency 使用 `id=ttfb_read|ttlb_write`；
+  Namespace 僅 transaction/error measurements 帶 `namespace`。
+- ECS 3.8.1.1 的 HTTP 200 all-null `Series` placeholder 代表 no-data window，
+  parser 會接受為空結果，不再產生間歇性 mapping error。
+- VDC success/user/system error rates 映射 2xx/4xx/5xx；aggregate failed transaction
+  省略以免錯分或 double count。Namespace 同樣只輸出可證實的 request rates。
+- `tls.verify` 預設仍為 true。明確 false 在 production 也可通過設定驗證；runtime
+  會以 cluster/environment 記錄 WARN，且不記錄 endpoint。
+- Partial-live appliance evidence 不含 endpoint、credential、token、raw response、
+  Node ID 或 Namespace 名稱，也不提升 Profile certification。
 
 ## ECS-008 Notes
 
@@ -59,8 +113,9 @@ Active Change: ECS-008
 
 ## ECS-006 Notes
 
-- Performance Collector 現在解析並原子快取 VDC/Namespace Flux values，公開
-  throughput、latency 與 request/status-window Gauge；Bucket scope 仍 unavailable。
+- Performance Collector 當時以 synthetic schema 解析並原子快取 VDC/Namespace
+  Flux values；其 Namespace throughput/latency 與 status-window 假設已由
+  ECS-009 的 appliance evidence 取代。Bucket scope 維持 unavailable。
 - Conditional capability 需 per-cluster 明列，mixed interval rates 與 unavailable
   capability 不可覆寫。Recovery 不再繞過 guard。
 - Node disk 使用 filesystem allowlist；network 受 allowlist/max/bond policy 限制；

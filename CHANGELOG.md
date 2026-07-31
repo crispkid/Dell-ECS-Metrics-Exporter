@@ -7,6 +7,8 @@ approved.
 
 ## Unreleased
 
+## [1.0.0-rc.1] - 2026-08-01
+
 ### Added
 
 - Multi-cluster Dell ECS exporter runtime, Prometheus metrics, authenticated
@@ -21,6 +23,12 @@ approved.
   target-scale performance gates.
 - Production Runbook, release checklist, Prometheus alert rules, security
   policy, and contribution guidance.
+- Explicit prerelease workflow policy: RC tags retain deterministic, race,
+  container, Kubernetes schema, synthetic scale, dependency/license, image
+  scan, SBOM, signing and OCI provenance gates. Private RCs record a signed
+  GitHub-attestation boundary when the repository plan lacks native support;
+  stable tags additionally require native attestation, protected exact-build
+  ECS, deployed E2E and deployed performance certification.
 
 ### Compatibility notes
 
@@ -33,3 +41,13 @@ approved.
   remains an environment limitation; it is not generalized to physical ECS.
 - Formal ECS 3.8.1.4 appliance certification and all Profile
   `tested_builds` remain pending external evidence and reviewer approval.
+
+### RC limitations
+
+- This release is for evaluation and integration testing, not stable
+  production approval.
+- Exact physical ECS 3.8.1.4, deployed target-scale, tagged deployed E2E and
+  named maintainer/security reviewer evidence remain required for v1.0.0.
+- Node service/process, Disk, Flux interval-derived rates, replication
+  status/lag and recovery progress do not yet have qualifying live evidence on
+  any target version; Bucket Performance is unavailable by design.

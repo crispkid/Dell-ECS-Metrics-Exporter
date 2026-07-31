@@ -68,7 +68,7 @@ func TestMetricsExpositionAndObservers(t *testing.T) {
 		},
 		{
 			Cluster: "alpha", VDC: "vdc-a", Namespace: "namespace-a",
-			Metric: model.PerformanceLatency, Operation: "PUT", Quantile: "p99", Value: 0.012,
+			Metric: model.PerformanceRequests, Operation: "ALL", StatusClass: "2xx", Value: 12,
 		},
 	})
 	store.ReplaceNodes("orphan", []model.Node{{Cluster: "orphan", ID: "n", Name: "n"}})
@@ -116,7 +116,7 @@ func TestMetricsExpositionAndObservers(t *testing.T) {
 		"ecs_node_network_receive_bytes_total", "ecs_namespace_quota_bytes",
 		"ecs_bucket_soft_quota_bytes", "ecs_replication_status", "ecs_recovery_progress_ratio",
 		"ecs_node_service_health", "ecs_vdc_read_throughput_bytes_per_second",
-		"ecs_namespace_request_latency_seconds",
+		"ecs_namespace_requests",
 	} {
 		if families[name] == nil {
 			t.Errorf("metric family %s is missing", name)

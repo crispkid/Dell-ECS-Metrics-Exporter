@@ -217,15 +217,6 @@ func (r *Runner) CollectNodeResources(ctx context.Context) error {
 	if !cpuMemoryEnabled && !networkEnabled && !diskEnabled {
 		return nil
 	}
-	fluxData, err := r.api.PostBytes(
-		ctx, "node-resources", "/flux/api/external/v2/query", nil,
-		map[string]string{"query": nodeResourceFluxQuery(
-			cpuMemoryEnabled, diskEnabled, networkEnabled,
-		)},
-	)
-	if err != nil {
-		return err
-	}
 	policy := ecs.NodeResourcePolicy{
 		NetworkInterfaces:    r.config.NodeResources.NetworkInterfaces,
 		MaxNetworkInterfaces: r.config.NodeResources.EffectiveMaxNetworkInterfaces(),
@@ -234,9 +225,24 @@ func (r *Runner) CollectNodeResources(ctx context.Context) error {
 	if diskEnabled {
 		policy.Filesystems = r.config.NodeResources.Filesystems
 	}
-	resources, err := ecs.ParseFluxNodeResourcesWithPolicy(fluxData, policy)
-	if err != nil {
-		return err
+	resources := make(map[string]ecs.NodeResource)
+	for _, query := range nodeResourceFluxQueries(
+		cpuMemoryEnabled, diskEnabled, networkEnabled,
+	) {
+		fluxData, err := r.api.PostBytes(
+			ctx, "node-resources", "/flux/api/external/v2/query", nil,
+			map[string]string{"query": query},
+		)
+		if err != nil {
+			return err
+		}
+		values, err := ecs.ParseFluxNodeResourcesWithPolicy(fluxData, policy)
+		if err != nil {
+			return err
+		}
+		if err := mergeNodeResources(resources, values); err != nil {
+			return err
+		}
 	}
 	snapshot := r.store.Snapshot()
 	nodes := make([]model.Node, 0, len(snapshot.Nodes))
@@ -360,13 +366,6 @@ func (r *Runner) CollectPerformance(ctx context.Context) error {
 	if !vdcEnabled && !namespaceEnabled {
 		return nil
 	}
-	data, err := r.api.PostBytes(
-		ctx, "vdc-performance", "/flux/api/external/v2/query", nil,
-		map[string]string{"query": performanceFluxQuery(vdcEnabled, namespaceEnabled)},
-	)
-	if err != nil {
-		return err
-	}
 	defaultVDC := ""
 	for _, value := range r.store.Snapshot().Clusters {
 		if value.Name == r.config.Name {
@@ -374,16 +373,25 @@ func (r *Runner) CollectPerformance(ctx context.Context) error {
 			break
 		}
 	}
-	values, err := ecs.ParseFluxPerformance(data, r.config.Name, defaultVDC, r.now().UTC())
-	if err != nil {
-		return err
-	}
-	values = slices.DeleteFunc(values, func(value model.Performance) bool {
-		if value.Namespace == "" {
-			return !vdcEnabled
+	var values []model.Performance
+	for _, query := range performanceFluxQueries(vdcEnabled, namespaceEnabled) {
+		data, err := r.api.PostBytes(
+			ctx, "vdc-performance", "/flux/api/external/v2/query", nil,
+			map[string]string{"query": query},
+		)
+		if err != nil {
+			return err
 		}
-		return !namespaceEnabled
-	})
+		parsed, err := ecs.ParseFluxPerformance(
+			data, r.config.Name, defaultVDC, r.now().UTC(),
+		)
+		if err != nil {
+			return err
+		}
+		if err := mergePerformances(&values, parsed); err != nil {
+			return err
+		}
+	}
 	r.store.ReplacePerformances(r.config.Name, values)
 	return nil
 }
@@ -750,42 +758,147 @@ func preserveNodeResources(nodes, previous []model.Node) {
 	}
 }
 
-func nodeResourceFluxQuery(cpuMemory, disk, network bool) string {
-	var measurements []string
+func nodeResourceFluxQueries(cpuMemory, disk, network bool) []string {
+	var queries []string
 	if cpuMemory {
-		measurements = append(
-			measurements, `r._measurement == "cpu"`, `r._measurement == "mem"`,
+		queries = append(
+			queries,
+			nodeResourceFluxQuery(
+				`r._measurement == "cpu" and r._field == "usage_idle" and r.cpu == "cpu-total"`,
+				`"_start", "_stop", "_time", "_value", "_field", "_measurement", "node_id", "cpu", "host"`,
+			),
+			nodeResourceFluxQuery(
+				`r._measurement == "mem" and (r._field == "used" or r._field == "total")`,
+				`"_start", "_stop", "_time", "_value", "_field", "_measurement", "node_id", "host"`,
+			),
 		)
 	}
 	if disk {
-		measurements = append(measurements, `r._measurement == "disk"`)
+		queries = append(queries, nodeResourceFluxQuery(
+			`r._measurement == "disk" and (r._field == "used" or r._field == "total")`,
+			`"_start", "_stop", "_time", "_value", "_field", "_measurement", "node_id", "host", "path", "filesystem", "device"`,
+		))
 	}
 	if network {
-		measurements = append(measurements, `r._measurement == "net"`)
+		queries = append(queries, nodeResourceFluxQuery(
+			`r._measurement == "net" and (r._field == "bytes_recv" or r._field == "bytes_sent")`,
+			`"_start", "_stop", "_time", "_value", "_field", "_measurement", "node_id", "host", "interface"`,
+		))
 	}
-	query := `from(bucket: "monitoring_op")
+	return queries
+}
+
+func nodeResourceFluxQuery(predicate, columns string) string {
+	return `from(bucket: "monitoring_op")
   |> range(start: -10m)
-  |> filter(fn: (r) => ` + strings.Join(measurements, " or ") + `)`
-	if cpuMemory {
-		query += `
-  |> filter(fn: (r) => r._measurement != "cpu" or r.cpu == "cpu-total")`
-	}
-	return query + `
+  |> filter(fn: (r) => ` + predicate + `)
+  |> keep(columns: [` + columns + `])
   |> last()`
 }
 
-func performanceFluxQuery(vdc, namespace bool) string {
-	query := `from(bucket: "monitoring_vdc")
-  |> range(start: -10m)
-  |> filter(fn: (r) => r._measurement =~ /^cq_performance_/)`
-	switch {
-	case vdc && !namespace:
-		query += `
-  |> filter(fn: (r) => (not exists r.namespace) or r.namespace == "")`
-	case !vdc && namespace:
-		query += `
-  |> filter(fn: (r) => exists r.namespace and r.namespace != "")`
+func mergeNodeResources(
+	target, source map[string]ecs.NodeResource,
+) error {
+	for nodeID, incoming := range source {
+		current := target[nodeID]
+		if incoming.CPUUsageRatio != nil {
+			if current.CPUUsageRatio != nil {
+				return fmt.Errorf("Flux CPU series is duplicated across queries")
+			}
+			current.CPUUsageRatio = incoming.CPUUsageRatio
+		}
+		if incoming.MemoryUsedBytes != nil {
+			if current.MemoryUsedBytes != nil {
+				return fmt.Errorf("Flux memory used series is duplicated across queries")
+			}
+			current.MemoryUsedBytes = incoming.MemoryUsedBytes
+		}
+		if incoming.MemoryTotalBytes != nil {
+			if current.MemoryTotalBytes != nil {
+				return fmt.Errorf("Flux memory total series is duplicated across queries")
+			}
+			current.MemoryTotalBytes = incoming.MemoryTotalBytes
+		}
+		if incoming.DiskUsedBytes != nil || incoming.DiskTotalBytes != nil {
+			if current.DiskUsedBytes != nil || current.DiskTotalBytes != nil {
+				return fmt.Errorf("Flux disk series is duplicated across queries")
+			}
+			current.DiskUsedBytes = incoming.DiskUsedBytes
+			current.DiskTotalBytes = incoming.DiskTotalBytes
+		}
+		for _, network := range incoming.Network {
+			if slices.ContainsFunc(current.Network, func(value model.Network) bool {
+				return value.Interface == network.Interface
+			}) {
+				return fmt.Errorf("Flux network interface is duplicated across queries")
+			}
+			current.Network = append(current.Network, network)
+		}
+		slices.SortFunc(current.Network, func(left, right model.Network) int {
+			return strings.Compare(left.Interface, right.Interface)
+		})
+		target[nodeID] = current
 	}
-	return query + `
+	return nil
+}
+
+func performanceFluxQueries(vdc, namespace bool) []string {
+	var queries []string
+	if vdc {
+		queries = append(queries, performanceFluxQuery(
+			`(r._measurement == "cq_performance_throughput" and
+      (r._field == "total_read_requests_size" or r._field == "total_write_requests_size")) or
+    (r._measurement == "cq_performance_transaction" and
+      (r._field == "failed_request_counter" or r._field == "succeed_request_counter")) or
+    (r._measurement == "cq_performance_error" and
+      (r._field == "system_errors" or r._field == "user_errors"))`,
+			`"_start", "_stop", "_time", "_value", "_field", "_measurement"`,
+		))
+		queries = append(queries, performanceFluxQuery(
+			`r._measurement == "cq_performance_latency" and
+    (r._field == "p50" or r._field == "p99")`,
+			`"_start", "_stop", "_time", "_value", "_field", "_measurement", "id"`,
+		))
+	}
+	if namespace {
+		queries = append(queries, performanceFluxQuery(
+			`(r._measurement == "cq_performance_transaction_ns" and
+      (r._field == "failed_request_counter" or r._field == "succeed_request_counter")) or
+    (r._measurement == "cq_performance_error_ns" and
+      (r._field == "system_errors" or r._field == "user_errors"))`,
+			`"_start", "_stop", "_time", "_value", "_field", "_measurement", "namespace"`,
+		))
+	}
+	return queries
+}
+
+func performanceFluxQuery(predicate, columns string) string {
+	return `from(bucket: "monitoring_vdc")
+  |> range(start: -10m)
+  |> filter(fn: (r) => ` + predicate + `)
+  |> keep(columns: [` + columns + `])
   |> last()`
+}
+
+func mergePerformances(target *[]model.Performance, source []model.Performance) error {
+	seen := make(map[string]struct{}, len(*target)+len(source))
+	for _, value := range *target {
+		seen[performanceKey(value)] = struct{}{}
+	}
+	for _, value := range source {
+		key := performanceKey(value)
+		if _, exists := seen[key]; exists {
+			return fmt.Errorf("performance Flux series contains duplicate metric labels across queries")
+		}
+		seen[key] = struct{}{}
+		*target = append(*target, value)
+	}
+	return nil
+}
+
+func performanceKey(value model.Performance) string {
+	return strings.Join([]string{
+		value.Cluster, value.VDC, value.Namespace, string(value.Metric),
+		value.Operation, value.StatusClass, value.Quantile,
+	}, "\x00")
 }

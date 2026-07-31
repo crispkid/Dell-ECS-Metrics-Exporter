@@ -33,6 +33,23 @@ func TestLoadRepositoryProfiles(t *testing.T) {
 		if len(value.Version.TestedBuilds) != 0 {
 			t.Errorf("%s tested builds = %v, want empty", value.ProfileID, value.Version.TestedBuilds)
 		}
+		if value.Evidence.FeatureValidationPolicy != featurePolicyShared {
+			t.Errorf(
+				"%s feature validation policy = %q", value.ProfileID,
+				value.Evidence.FeatureValidationPolicy,
+			)
+		}
+		if !slices.Contains(value.Evidence.SharedValidatedCapabilities, "authentication") ||
+			!slices.Contains(value.Evidence.SharedValidatedCapabilities, "flux_latest_snapshot") {
+			t.Errorf(
+				"%s shared validated capabilities = %v",
+				value.ProfileID, value.Evidence.SharedValidatedCapabilities,
+			)
+		}
+		if slices.Contains(value.Evidence.SharedValidatedCapabilities, "node_disk_capacity") ||
+			slices.Contains(value.Evidence.SharedValidatedCapabilities, "replication_status") {
+			t.Errorf("%s contains an unvalidated capability", value.ProfileID)
+		}
 		if !value.Supports(mustVersion(t, value.Version.MinInclusive)) {
 			t.Errorf("%s does not support inclusive lower bound", value.ProfileID)
 		}
@@ -44,9 +61,11 @@ func TestLoadRepositoryProfiles(t *testing.T) {
 	copyOfProfiles := catalog.Profiles()
 	copyOfProfiles[0].ProfileID = "mutated"
 	copyOfProfiles[0].Capabilities["authentication"] = SupportUnavailable
+	copyOfProfiles[0].Evidence.SharedValidatedCapabilities[0] = "mutated"
 	freshProfile := catalog.Profiles()[0]
 	if freshProfile.ProfileID != "ecs-3.6" ||
-		freshProfile.Capabilities["authentication"] != SupportNative {
+		freshProfile.Capabilities["authentication"] != SupportNative ||
+		freshProfile.Evidence.SharedValidatedCapabilities[0] == "mutated" {
 		t.Fatal("Profiles returned mutable catalog data")
 	}
 }
@@ -190,6 +209,27 @@ func TestLoadDirRejectsInvalidCatalogs(t *testing.T) {
 				),
 			},
 			wantErrPart: "sandbox_certified",
+		},
+		{
+			name: "invalid feature validation policy",
+			files: map[string]string{
+				"ecs-bad.json": strings.Replace(
+					string(valid), featurePolicyShared, "per-version-only", 1,
+				),
+			},
+			wantErrPart: "feature_validation_policy",
+		},
+		{
+			name: "unavailable shared validated capability",
+			files: map[string]string{
+				"ecs-bad.json": strings.Replace(
+					string(valid),
+					`"shared_validated_capabilities": [`,
+					`"shared_validated_capabilities": ["bucket_performance",`,
+					1,
+				),
+			},
+			wantErrPart: "is unavailable",
 		},
 	}
 

@@ -189,11 +189,8 @@ func newSnapshotCollector(
 			"vdc_read":           descriptor("ecs_vdc_read_throughput_bytes_per_second", "Dell ECS VDC read throughput.", "cluster", "vdc"),
 			"vdc_write":          descriptor("ecs_vdc_write_throughput_bytes_per_second", "Dell ECS VDC write throughput.", "cluster", "vdc"),
 			"vdc_latency":        descriptor("ecs_vdc_request_latency_seconds", "Dell ECS VDC request latency.", "cluster", "vdc", "operation", "quantile"),
-			"vdc_requests":       descriptor("ecs_vdc_requests", "Dell ECS VDC request count for the source window.", "cluster", "vdc", "operation", "status_class"),
-			"namespace_read":     descriptor("ecs_namespace_read_throughput_bytes_per_second", "Dell ECS Namespace read throughput.", "cluster", "vdc", "namespace"),
-			"namespace_write":    descriptor("ecs_namespace_write_throughput_bytes_per_second", "Dell ECS Namespace write throughput.", "cluster", "vdc", "namespace"),
-			"namespace_latency":  descriptor("ecs_namespace_request_latency_seconds", "Dell ECS Namespace request latency.", "cluster", "vdc", "namespace", "operation", "quantile"),
-			"namespace_requests": descriptor("ecs_namespace_requests", "Dell ECS Namespace request count for the source window.", "cluster", "vdc", "namespace", "operation", "status_class"),
+			"vdc_requests":       descriptor("ecs_vdc_requests", "Dell ECS VDC request rate per second.", "cluster", "vdc", "operation", "status_class"),
+			"namespace_requests": descriptor("ecs_namespace_requests", "Dell ECS Namespace request rate per second.", "cluster", "vdc", "namespace", "operation", "status_class"),
 			"replication_status": descriptor("ecs_replication_status", "Dell ECS replication status.", "cluster", "replication_group", "source_vdc", "target_vdc"),
 			"replication_lag":    descriptor("ecs_replication_lag_seconds", "Dell ECS replication lag.", "cluster", "replication_group", "source_vdc", "target_vdc"),
 			"recovery_progress":  descriptor("ecs_recovery_progress_ratio", "Dell ECS recovery progress.", "cluster", "replication_group", "source_vdc", "target_vdc", "kind"),
@@ -323,15 +320,6 @@ func (c *snapshotCollector) collectPerformance(
 		return
 	}
 	switch value.Metric {
-	case model.PerformanceReadThroughput:
-		channel <- gauge(c.descriptors["namespace_read"], value.Value, cluster, vdc, namespace)
-	case model.PerformanceWriteThroughput:
-		channel <- gauge(c.descriptors["namespace_write"], value.Value, cluster, vdc, namespace)
-	case model.PerformanceLatency:
-		channel <- gauge(
-			c.descriptors["namespace_latency"], value.Value, cluster, vdc, namespace,
-			label(value.Operation), label(value.Quantile),
-		)
 	case model.PerformanceRequests:
 		channel <- gauge(
 			c.descriptors["namespace_requests"], value.Value, cluster, vdc, namespace,

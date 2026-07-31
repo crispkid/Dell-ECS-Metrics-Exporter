@@ -9,6 +9,7 @@ cd "$PROJECT_ROOT"
 source "$SCRIPT_DIR/go-env.sh"
 
 chart="charts/dell-ecs-metrics-exporter"
+local_compose="deploy/local/compose.yaml"
 temporary_dir="$(mktemp -d "${TMPDIR:-/tmp}/dell-ecs-deploy-check.XXXXXX")"
 trap 'rm -r -- "$temporary_dir"' EXIT
 
@@ -65,6 +66,70 @@ if command -v promtool >/dev/null 2>&1; then
   promtool check rules deploy/prometheus/alerts.yaml
 else
   printf 'notice: promtool unavailable; strict alert YAML/operator metadata checks completed\n'
+fi
+
+for local_asset in \
+  "$local_compose" \
+  deploy/local/exporter.simulation.yaml \
+  deploy/local/mock-ecs/main.go \
+  deploy/local/prometheus/prometheus.yml \
+  deploy/local/grafana/provisioning/datasources/prometheus.yaml \
+  deploy/local/README.md; do
+  if [[ ! -f "$local_asset" ]]; then
+    printf 'error: local observability asset is missing: %s\n' "$local_asset" >&2
+    exit 1
+  fi
+done
+for contract in \
+  'endpoint: https://127.0.0.1:4443' \
+  'username: ${ECS_MOCK_USERNAME}' \
+  'password: ${ECS_MOCK_PASSWORD}' \
+  'environment: test' \
+  'verify: false'; do
+  if ! rg -Fq -- "$contract" deploy/local/exporter.simulation.yaml; then
+    printf 'error: local Exporter simulation configuration is missing contract %s\n' \
+      "$contract" >&2
+    exit 1
+  fi
+done
+ECS_MOCK_USERNAME=monitor ECS_MOCK_PASSWORD=synthetic-only \
+  go run ./cmd/ecs-exporter \
+    -config deploy/local/exporter.simulation.yaml \
+    -profiles-dir profiles \
+    -validate-config >/dev/null
+for contract in \
+  'host.docker.internal:8080' \
+  'job_name: dell-ecs-metrics-exporter' \
+  '/etc/prometheus/rules/dell-ecs-metrics-exporter.yaml'; do
+  if ! rg -Fq -- "$contract" deploy/local/prometheus/prometheus.yml; then
+    printf 'error: local Prometheus configuration is missing contract %s\n' "$contract" >&2
+    exit 1
+  fi
+done
+for contract in \
+  'quay.io/prometheus/prometheus:v3.13.1' \
+  'grafana/grafana:13.1.0' \
+  '127.0.0.1:${PROMETHEUS_PORT:-9090}:9090' \
+  '127.0.0.1:${GRAFANA_PORT:-3000}:3000' \
+  'host.docker.internal:host-gateway' \
+  'GF_AUTH_ANONYMOUS_ORG_ROLE: Viewer' \
+  'GF_USERS_VIEWERS_CAN_EDIT: "true"' \
+  'GF_PLUGINS_PREINSTALL_DISABLED: "true"'; do
+  if ! rg -Fq -- "$contract" "$local_compose"; then
+    printf 'error: local Compose configuration is missing contract %s\n' "$contract" >&2
+    exit 1
+  fi
+done
+if ! rg -Fq 'url: http://prometheus:9090' \
+  deploy/local/grafana/provisioning/datasources/prometheus.yaml; then
+  printf 'error: local Grafana datasource does not target Compose Prometheus\n' >&2
+  exit 1
+fi
+if command -v docker >/dev/null 2>&1 &&
+  docker compose version >/dev/null 2>&1; then
+  docker compose -f "$local_compose" config --quiet
+else
+  printf 'notice: Docker Compose unavailable; local stack static checks completed\n'
 fi
 
 helm lint "$chart"

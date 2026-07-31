@@ -5,8 +5,15 @@
 ECS-006 補完十項 runtime、mapping 與 telemetry 缺口，ECS-007 修正非空 Bucket
 實測揭露的 envelope、fallback 與 billing KB 相容性，ECS-008 新增 Bare Metal 與
 fail-closed production delivery gates；ECS CE 3.8.1.4 另完成 Management-backed
-partial-live 驗證。專案仍處於 pre-release，因正式 ECS 3.8.1.4 Flux/multi-VDC、
-target-scale、container/Kubernetes、external scanner 與 reviewer evidence 尚未完成。
+partial-live 驗證。ECS-009 再依實體 ECS 3.8.1.1 修正 split Node/Performance
+Flux mapping，並允許企業自簽憑證明確停用 TLS verification 且輸出 WARN。
+ECS-010 新增重用 production path 的去識別化唯讀 Flux Probe 與四 Profile replay，
+供沒有本地實體版本時向客戶、Dell 或合作夥伴收集 exact-build 候選證據。
+ECS-011 改採 `shared-live-any-target-version`，把任一目標版本已真實驗證的共用功能
+標示為四個 Profile 全部驗證完成，同時保留版本差異與 exact-build 執行事實。
+ECS-012 將第一個可公開評估版本固定為 `v1.0.0-rc.1`，新增 RC／stable workflow
+分流與明確 Pre-release notes；完整 3.8.1.x range/multi-VDC、deployed target-scale、
+exact-build E2E 與具名 reviewer evidence 仍是 stable `v1.0.0` 的門檻。
 不得把 fixture/component、CE 部分 evidence 或 workflow 定義誤報為 production
 approval 或整個 Profile 真機認證。
 
@@ -17,8 +24,8 @@ approval 或整個 Profile 真機認證。
   將資料轉換為 Prometheus Metrics，並提供唯讀 Inventory REST API、Health Check
   與 Exporter 自我監控能力；歷史資料與視覺化由 Prometheus、Grafana 與
   Alertmanager 負責。
-- Lifecycle: `pre-release`（fixture/component-verified runtime；CE Management partial live；
-  sandbox certification pending）
+- Lifecycle: `release-candidate`（target `v1.0.0-rc.1`; stable production certification
+  pending）
 - Owners: `Project Maintainer` 對產品與技術決策負責；`Security Reviewer` 對認證、
   機密資料、CI 與供應鏈變更負責。尚未指定個人姓名。
 - Shared baseline version: `1.1.0`
@@ -34,7 +41,7 @@ approval 或整個 Profile 真機認證。
 - API/data contracts: `SPECIFICATION.md` 第 9、11、12、13、16、22、23 節、
   `DELL_ECS_API_MAPPING.md`、`profiles/`、`docs/ecs-api/` 與 `testdata/ecs/`
 - Deployment and operations: `SPECIFICATION.md` 第 17 至 20 節、`Dockerfile`、
-  `charts/dell-ecs-metrics-exporter/`、`deploy/bare-metal/`、
+  `charts/dell-ecs-metrics-exporter/`、`deploy/bare-metal/`、`deploy/local/`、
   `docs/PRODUCTION_RUNBOOK.md` 與 `docs/RELEASE_CHECKLIST.md`。
 - Design system and content rules: 不適用；V1.0 不包含圖形使用者介面或 Grafana
   Dashboard。
@@ -52,6 +59,7 @@ V1.0 元件。
 | Component | Path | Responsibility | Owner | Runtime |
 |---|---|---|---|---|
 | Exporter entry point | `cmd/ecs-exporter/` | Config/Profile validation、runtime wiring、HTTP/scheduler lifecycle 與 graceful logout | Project Maintainer | Go 1.26.5 |
+| Flux compatibility probe | `cmd/ecs-flux-probe/`、`internal/fluxprobe/` | Read-only exact-build mapping probe and redacted count/policy report | Project Maintainer | Go 1.26.5 |
 | ECS compatibility contracts | `profiles/`、`docs/ecs-api/`、`testdata/ecs/` | 版本選擇、capability、API mapping 與合成 fixtures | Project Maintainer | JSON、Markdown |
 | ECS profile runtime | `internal/profile/` | 四段版本解析、Profile 嚴格載入、range/mixed capability resolution | Project Maintainer | Go 1.26.5 |
 | Runtime configuration | `internal/config/`、`config.example.yaml` | Strict YAML/env/secret/TLS/interval/rate-limit/capability/resource-policy validation | Project Maintainer | Go、YAML |
@@ -60,7 +68,7 @@ V1.0 元件。
 | Cache and domain model | `internal/cache/`、`internal/model/` | Deep-copy thread-safe snapshots、per-domain generation/state 與統一資料模型 | Project Maintainer | Go 1.26.5 |
 | Prometheus mapping | `internal/metrics/` | Domain/self metric family、type、unit、bounded labels 與 exposition | Project Maintainer | Go + Prometheus Go client |
 | Inventory and health API | `internal/httpapi/` | Liveness/readiness/version、authenticated Inventory、pagination/filter/sort 與 RFC 9457 | Project Maintainer | Go 1.26.5 |
-| Deployment | `Dockerfile`、Helm Chart、`deploy/bare-metal/` | Digest-pinned image、Kubernetes policy與 hardened systemd install/upgrade/verify | Project Maintainer | OCI、Kubernetes、Helm、systemd |
+| Deployment | `Dockerfile`、Helm Chart、`deploy/bare-metal/`、`deploy/local/` | Digest-pinned image、Kubernetes policy、hardened systemd install/upgrade/verify，以及本機 Prometheus/Grafana integration test stack | Project Maintainer | OCI、Kubernetes、Helm、systemd、Docker Compose |
 | Delivery and operations | release/performance/live scripts、`.github/workflows/`、`docs/`、`deploy/prometheus/` | Release/SBOM/sign/provenance、exact-build/E2E/scale gates、alerts/runbook | Project Maintainer + Security Reviewer | Bash、Go、GitHub Actions、Prometheus |
 | CI | `.github/workflows/ci.yml`、`scripts/ci-policy-check.sh` | SHA-pinned read-only PR verification、Harness 與 OCI build | Project Maintainer | GitHub Actions |
 | Portable harness | `HARNESS/` | 專案檢查、證據與治理契約 | Project Maintainer | Bash 3.2+ |
@@ -199,8 +207,11 @@ mapping ID 與 evidence classification。
 
 - Deployment targets: Docker/OCI、Kubernetes Deployment 與 Helm Chart；V1.0 預設
   單 replica。
-- Release mechanism: `.github/workflows/ci.yml` 已建置、測試與建立本地 image；
-  發布 immutable digest image/Chart 的受保護 release pipeline 尚未建立。
+- Release mechanism: `.github/workflows/release.yml` 對 prerelease tag 執行 deterministic、
+  race、container、schema、synthetic scale、dependency/license、multi-architecture image
+  scan、SBOM、Sigstore 與 OCI provenance 後發布；public/Enterprise repository 另產生
+  GitHub-native attestation，private RC 以 signed boundary asset 揭露平台限制；stable
+  tag 額外要求正式 ECS、CE、deployed E2E、deployed performance 與 native attestation。
 - Health/readiness evidence: `/health` 與 `/api/v1/health`；liveness 不因單一 ECS
   失效而失敗，readiness 依可服務 cache 判斷。
 - Observability: 結構化 JSON logs、`ecs_exporter_*` self-monitoring metrics、collector
@@ -208,7 +219,7 @@ mapping ID 與 evidence classification。
 - Rollback or forward-recovery: 以先前已驗證 image digest 與 Helm release rollback
   回復；設定必須向後相容或附 migration notes。Cache 為記憶體資料，重啟後重新收集。
 - Incident and escalation path: Project Maintainer；security/credential 事件升級至
-  Security Reviewer。正式 runbook 尚未建立，production 發布前必須補齊。
+  Security Reviewer；操作與事故處理程序見 `docs/PRODUCTION_RUNBOOK.md`。
 
 ## CI and Supply Chain
 
@@ -222,26 +233,29 @@ mapping ID 與 evidence classification。
   禁止新增長效 cloud credential，除非 Security Reviewer 記錄無替代方案與輪替流程。
 - Dependency update ownership: Project Maintainer 每月至少檢視一次；Critical/High
   advisories 依風險即時處理。
-- Artifact provenance, SBOM, checksums, and signing: release 必須產生 checksums、
-  SPDX 或 CycloneDX SBOM 與 provenance；簽章工具與 registry 尚未選定，是首次
-  release 前的阻擋決策。
+- Artifact provenance, SBOM, checksums, and signing: release 產生 checksums、SPDX SBOM、
+  BuildKit OCI provenance/SBOM 與 Sigstore keyless signatures；GitHub-native attestation
+  依 repository plan 執行，private RC 以 signed boundary asset 揭露，stable 必須成功。
+  OCI image 與 Helm chart 發布至 GHCR，GitHub Release 保存 archive 與驗證資料。
 
 ## Known Constraints
 
-- 目標版本族已選定為 ECS 3.6.x、3.7.x、3.8.0.x 與 3.8.1.x。ECS 3.6 已建立
-  documentation mapping；3.7/3.8 REST API ZIP 仍需 Dell Support 登入後比對。四個
-  Profile 都尚無 sandbox-certified build，不能宣稱 runtime 相容。
+- 目標版本族已選定為 ECS 3.6.x、3.7.x、3.8.0.x 與 3.8.1.x。共用功能依 ECS-011
+  採跨版本 live evidence，已列於每個 Profile 的 `shared_validated_capabilities`。
+  3.7/3.8 REST API ZIP 與 exact-build reports 可補強版本差異，但不阻擋共享功能狀態。
 - Dell 已記錄 ECS 3.7/3.8.0 Flux range 問題；這兩個 Profile 禁用 interval-derived
   rate。ECS 3.8.1 只有在 live range-boundary gate 通過後才能啟用；ECS CE 3.8.1.4
   的 Flux external query 回 HTTP 503，不能用來通過此 gate。
 - ECS 3.8.0/3.8.1 可能受 accepted server names/Host Header 影響；proxy/load
   balancer 測試是版本認證必要項目。
-- Go 已固定為 language 1.26.0／toolchain 1.26.5；正式 Git remote 尚未設定，
-  `dell-ecs-metrics-exporter` module path 是可機械式更名的暫定值。
+- Go 已固定為 language 1.26.0／toolchain 1.26.5；Git remote 是
+  `crispkid/Dell-ECS-Metrics-Exporter`。`dell-ecs-metrics-exporter` module path 仍是內部
+  application module identity，未對外承諾 Go library import compatibility。
 - 儲存庫已有完整 fixture/component-verified runtime、unit/component tests、HTTP
   API、Dockerfile、Helm Chart 與 CI workflow，以及 ECS CE 3.8.0.3/3.8.1.4 部分
-  Management live evidence；尚無正式設備 Flux、multi-VDC、container startup、
-  live Kubernetes、效能或完整 Profile 認證。
+  Management live evidence與 ECS 3.8.1.1 實體設備 Node/Performance Flux partial
+  live evidence；尚無正式 ECS 3.8.1.4、multi-VDC、container startup、live
+  Kubernetes、target-scale 或完整 Profile 認證。
 - ECS API response size 與 10,000 buckets 的記憶體/效能目標是初始估計，必須以
   目標版本實測。
 - V1.0 多副本策略預設為單 replica；若要求多 replica，必須先選擇 leader election
@@ -249,8 +263,8 @@ mapping ID 與 evidence classification。
 
 ## Project-Specific Agent Rules
 
-- 不得臆造 Dell ECS API URI、欄位、硬體資料、metric scope 或 counter 語意；
-  `candidate-inherited` mapping 不得標示為真機已驗證。
+- 不得臆造 Dell ECS API URI、欄位、硬體資料、metric scope 或 counter 語意；只有
+  在任一目標版本具有 qualifying live evidence 的功能可標示 `validated-shared`。
 - Profile 的 `tested_builds` 只能由隔離真機 integration evidence 更新；文件與
   synthetic fixture 不足以填入。
 - Prometheus scrape 僅可讀 cache，不得觸發 Dell ECS API。

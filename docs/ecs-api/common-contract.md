@@ -1,8 +1,9 @@
 # Common Dell ECS Adapter Contract
 
-此文件定義四個版本 Profile 的共同候選契約。每個版本文件會覆寫 evidence 狀態與
-已知差異。除 ECS 3.6 外，Management API mapping 在取得對應 REST API ZIP 或真機
-response 前仍是 `candidate-inherited`。
+此文件定義四個版本 Profile 的共同契約。ECS-011 採
+`shared-live-any-target-version`：任一目標版本已真實驗證的 production-path 功能，
+在四個 Profile 都是 `validated-shared`。每個版本文件仍覆寫已知差異、`unavailable`
+capability 與尚未在任何版本取得 live evidence 的功能。
 
 ## Transport and Authentication
 
@@ -14,6 +15,10 @@ response 前仍是 `candidate-inherited`。
 
 Token、Basic credential、Cookie、完整 private URL 與 raw response body不得寫入 log、
 metric label 或 fixture。Redirect 到不同 origin 時不得轉送 token。
+TLS certificate verification 預設啟用；若企業自簽憑證無法透過 `caFile` 建立信任，
+operator 可明確設定 `tls.verify: false`。此設定同樣允許用於 production，但啟動時
+必須記錄不含 endpoint 的 WARN，且部署方必須接受憑證鏈與 hostname/SAN 不再驗證的
+風險。
 
 ## Logical API Mappings
 
@@ -24,7 +29,7 @@ metric label 或 fixture。Redirect 到不同 origin 時不得轉送 token。
 | `MAP-NODE-INFO-001` | `GET /vdc/nodes` | `node[].nodeid`、`nodename`、`rackId`、`version`、`isLocal`；address fields optional | node identity、rack、version；version 也供 Profile selection | `status` 是 lockdown 狀態，不得當健康狀態 |
 | `MAP-NODE-HEALTH-001` | `GET /dashboard/zones/localzone/nodes?dataType=current` | node identity、`healthStatus`、good/bad disk counts；records 可位於 `node[]`、`nodes[]` 或 ECS 3.8.0 HAL `_embedded._instances[]` | `ecs_node_health`；只有明確的 healthy/good enum 映射 1，其他已知狀態為 0 | 未知 enum/缺欄位為 collector error，不能映射 0 |
 | `MAP-NODE-SERVICE-001` | 與 Node health 相同 response，僅在版本 response 實際提供 `services[]`/`processes[]` 時使用 | `name`、known `status` | conditional `ecs_node_service_health`；保留 `kind=service|process` | 不猜測額外 URI；未知狀態或重複名稱使完整 Node refresh 失敗 |
-| `MAP-NODE-RESOURCE-001` | Flux `monitoring_op` | `cpu.usage_idle` with `cpu=cpu-total`；`mem.used`、`mem.total`；`net.bytes_recv`、`net.bytes_sent` with `host,node_id,interface` | CPU ratio = `(100-usage_idle)/100`；memory bytes 直接映射；network bytes 是 monotonic Counter，保留 bounded `interface` label | 只取每個 series 的 `last()`；counter decrease 視為 reset；不得把不同 interface 靜默相加 |
+| `MAP-NODE-RESOURCE-001` | Flux `monitoring_op`；CPU、Memory、Network 使用三個獨立 `keep()`/`last()` queries，全部成功後才原子合併 | `cpu.usage_idle` with `cpu=cpu-total`；`mem.used`、`mem.total`；`net.bytes_recv`、`net.bytes_sent` with `host,node_id,interface` | CPU ratio = `(100-usage_idle)/100`；memory bytes 直接映射；network bytes 是 monotonic Counter，保留 bounded `interface` label | 合併 query 可能使 ECS 丟失 `cpu`/`interface`，因此禁止；任一子查詢失敗不得替換快取；counter decrease 視為 reset；不得把不同 interface 靜默相加 |
 | `MAP-NODE-DISK-001` | Flux `monitoring_op` measurement `disk` | `used`、`total` with `host,node_id,path,device` | 只有設定明確 allowlist 的 filesystem/device 才可聚合為 node disk used/total | 未設定 allowlist 時 capability 為 conditional 且不輸出 |
 | `MAP-NAMESPACE-INFO-001` | `GET /object/namespaces` | `namespace[].name/id`、quota/default fields optional | Namespace inventory；cluster namespace count 只能從完整成功 list 計算 | Dell 文件中的 JSON example 有格式瑕疵；parser 只接受真實有效 JSON |
 | `MAP-NAMESPACE-QUOTA-001` | `GET /object/namespaces/namespace/{namespace}/quota` | Legacy nested `namespace_quota_details.blockSize`/`notificationSize` or ECS 3.8.0 top-level fields | `blockSize` 為 hard quota、`notificationSize` 為 soft notification threshold；目前 public metric 只輸出 hard quota | `-1` 表示未設定：metric 省略，Inventory `null` + configured false；同時出現兩種 envelope 時拒絕 |
@@ -32,8 +37,8 @@ metric label 或 fixture。Redirect 到不同 origin 時不得轉送 token。
 | `MAP-BUCKET-INFO-001` | Enumerate `GET /object/namespaces`, then `GET /object/bucket?namespace={namespace}` with bounded `limit`/`marker` pagination | `object_bucket[].name`、`namespace`、`vpool`、`created`、feature flags | Bucket inventory、namespace bucket count、replication-group reference | ECS 3.8.0 rejects an empty Namespace filter；cross-Namespace items、duplicate/page loops fail the complete snapshot；`owner` 可進 Inventory但禁止作 metric label |
 | `MAP-BUCKET-QUOTA-001` | `GET /object/bucket/{bucketName}/quota?namespace={namespace}` | Legacy nested `bucket_quota_details.blockSize`/`notificationSize` or ECS 3.8.0 top-level fields；nested response 可另含 `bucketname`/`namespace` | `blockSize` -> hard quota；`notificationSize` -> soft quota | `-1` 表示未設定；不得輸出 -1、0 或 cluster capacity 替代；同時出現 nested 與 top-level envelope 時拒絕 |
 | `MAP-BUCKET-BILLING-001` | Prefer batch `POST /object/billing/buckets/{namespace}/info?sizeunit=KB` with JSON `{"id":[bucket names...]}`；HTTP 404/405/501 or a missing response item falls back to single bucket `GET /object/billing/buckets/{namespace}/{bucket}/info?sizeunit=KB` | ECS 3.8.0 batch success envelope is plural `bucket_billing_infos[]`；inherited candidate `bucket_billing_info[]` remains accepted；single response can use nested `bucket_billing_info` or ECS 3.8.0 top-level `name`、`namespace`、`total_size`、`total_size_unit`、`total_objects`、`sample_time` | `ecs_bucket_used_bytes`、`ecs_bucket_objects`；billing sample time 與 bucket last-modified 分開保存；billing `KB` 乘 1024 | 500/code999 does not fallback；duplicate/unrequested/malformed batch items fail the refresh；missing requested items fall back individually；雙 envelope、部分或失敗 enrichment 不得覆蓋完整 snapshot |
-| `MAP-VDC-PERFORMANCE-001` | Flux `monitoring_vdc` | `cq_performance_latency` p50/p99；`cq_performance_throughput` read/write；`cq_performance_transaction*`；`cq_performance_error*` | 僅 VDC/namespace scope；rate measurement 是 Gauge，`*_delta` 是 interval delta，不是 Counter | 不得重複展開成 Bucket scope；Profile 禁止 interval rate 時不執行這些 queries |
-| `MAP-NAMESPACE-PERFORMANCE-001` | Flux `monitoring_vdc` | Namespace-tagged throughput/latency 與 `cq_performance_transaction_ns*`、`cq_performance_error_ns*` | `ecs_namespace_*` throughput/latency/request Gauge；保留 VDC、Namespace、operation、quantile/status class | 不得映射為 Bucket metric |
+| `MAP-VDC-PERFORMANCE-001` | Flux `monitoring_vdc`；VDC core 與 latency 分開 `keep()`/`last()`，只允許精確 measurement/field | `cq_performance_throughput.total_read_requests_size|total_write_requests_size`；`cq_performance_latency.p50|p99` with `id=ttfb_read|ttlb_write`；`cq_performance_transaction.succeed_request_counter`；`cq_performance_error.user_errors|system_errors` | throughput bytes/s；latency ms 轉 seconds，READ/WRITE + quantile；success/user/system errors 分別映射 2xx/4xx/5xx request-rate Gauge；aggregate failed transaction 不輸出，避免錯分或重複 | 不查詢 regex、`*_head`、`*_delta`、`*_downsampled` 或 metadata；不得展開成 Namespace/Bucket；任一子查詢失敗不得替換快取 |
+| `MAP-NAMESPACE-PERFORMANCE-001` | Flux `monitoring_vdc`；只查 `cq_performance_transaction_ns` 與 `cq_performance_error_ns`，保留 `namespace` tag | `succeed_request_counter`、`user_errors`、`system_errors` | `ecs_namespace_requests` requests/second Gauge；operation=`ALL`，status class 分別 2xx/4xx/5xx | 官方與 ECS 3.8.1.1 response 都沒有 Namespace throughput/latency measurement；不得捏造或由 VDC 展開 |
 | `MAP-BUCKET-PERFORMANCE-001` | No documented Management/Flux mapping in current evidence | none | `unavailable` | 不輸出 bucket GET/PUT/HEAD、HTTP class、latency 或 throughput |
 | `MAP-REPLICATION-001` | `GET /dashboard/replicationgroups/{id}?dataType=current` and `GET /dashboard/rglinks/{id}?dataType=current` | names/ids、`rglinkStatus`、pending byte fields、`replicationRpoTimestamp` | `ecs_replication_status` from documented status enum；lag = max(now - RPO timestamp, 0) only when timestamp exists | RPO absent when no pending chunks is not an error；clock skew/negative result fails derived value |
 | `MAP-RECOVERY-001` | RG link fields and Flux `monitoring_vdc.cq_recover_status_summary` | `FailoverState/ProgressPercent`、`BootstrapState/ProgressPercent` or `data_recovered/data_to_recover` | recovery ratio only when operation kind is explicit；percent / 100 or recovered / total；metric 保留 source/target VDC 以區分同一 group 的多個 link | 不得把 bootstrap、failover、hardware recovery 合併成沒有 kind 的單一狀態 |
@@ -82,10 +87,17 @@ Parser rules:
 5. Unknown columns may be ignored; missing required tag/field makes the series unusable.
 6. Use `last()` for snapshot collectors. Only queries whose Profile permits interval rates may
    use time windows for rate/delta derivation.
+7. ECS 3.8.1.1 may encode an empty query result as
+   `{"Series":[{"Datatypes":null,"Columns":null,"Values":null}]}`. This exact all-null
+   placeholder is an empty result, not a mapping error；non-empty rows without columns remain
+   invalid.
 
 ## Unit Contract
 
 - Flux `mem`, `disk`, `net.bytes_*` values documented as bytes are used directly.
+- `cq_performance_throughput.total_*_requests_size` 非 `*_delta` 值直接作為
+  bytes/second；`cq_performance_latency` 的 p50/p99 值為 milliseconds，除以 1000
+  輸出 seconds。
 - Percent fields are divided by 100 and range-checked to `[0,1]`.
 - Dashboard replication pending size fields documented as Bytes are used directly.
 - Dashboard traffic documented as MB/s is converted to bytes/second using a documented

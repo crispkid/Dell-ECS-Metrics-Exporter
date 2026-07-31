@@ -145,12 +145,84 @@
       }
     },
     {
-      "file": "flux-vdc-performance.json",
-      "mapping_id": "MAP-VDC-PERFORMANCE-001",
-      "scenario": "VDC and namespace throughput latency transaction and error values",
+      "file": "flux-node-cpu.json",
+      "mapping_id": "MAP-NODE-RESOURCE-001",
+      "scenario": "CPU total series after an ECS-safe keep query",
       "evidence": "synthetic-document-derived",
       "expected": {
-        "count": 8
+        "cpu_usage_ratio": 0.275
+      }
+    },
+    {
+      "file": "flux-node-memory.json",
+      "mapping_id": "MAP-NODE-RESOURCE-001",
+      "scenario": "memory series after an ECS-safe keep query",
+      "evidence": "synthetic-document-derived",
+      "expected": {
+        "memory_used_bytes": 8589934592,
+        "memory_total_bytes": 17179869184
+      }
+    },
+    {
+      "file": "flux-node-network.json",
+      "mapping_id": "MAP-NODE-RESOURCE-001",
+      "scenario": "network series preserving the interface dimension",
+      "evidence": "synthetic-document-derived",
+      "expected": {
+        "network_receive_bytes_total": 123456789,
+        "network_transmit_bytes_total": 98765432,
+        "interface": "public"
+      }
+    },
+    {
+      "file": "flux-node-disk.json",
+      "mapping_id": "MAP-NODE-DISK-001",
+      "scenario": "allowlisted filesystem series after an ECS-safe keep query",
+      "evidence": "synthetic-document-derived",
+      "expected": {
+        "filesystem": "/data",
+        "disk_used_bytes": 4294967296,
+        "disk_total_bytes": 8589934592
+      }
+    },
+    {
+      "file": "flux-vdc-performance.json",
+      "mapping_id": "MAP-VDC-PERFORMANCE-001",
+      "scenario": "official VDC core and latency shapes plus namespace request rates",
+      "evidence": "synthetic-document-derived",
+      "expected": {
+        "count": 12
+      }
+    },
+    {
+      "file": "flux-vdc-core-performance.json",
+      "mapping_id": "MAP-VDC-PERFORMANCE-001",
+      "scenario": "VDC throughput transaction and error rates without fabricated tags",
+      "evidence": "synthetic-document-derived",
+      "expected": {
+        "mapped_count": 5,
+        "aggregate_failed_transaction_omitted": true
+      }
+    },
+    {
+      "file": "flux-vdc-latency.json",
+      "mapping_id": "MAP-VDC-PERFORMANCE-001",
+      "scenario": "VDC p50 and p99 latency with ECS id dimension",
+      "evidence": "synthetic-document-derived",
+      "expected": {
+        "mapped_count": 4,
+        "read_id": "ttfb_read",
+        "write_id": "ttlb_write"
+      }
+    },
+    {
+      "file": "flux-namespace-performance.json",
+      "mapping_id": "MAP-NAMESPACE-PERFORMANCE-001",
+      "scenario": "namespace transaction and error rates with namespace dimension",
+      "evidence": "synthetic-document-derived",
+      "expected": {
+        "mapped_count": 3,
+        "aggregate_failed_transaction_omitted": true
       }
     },
     {

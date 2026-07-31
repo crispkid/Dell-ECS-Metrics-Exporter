@@ -651,6 +651,9 @@ func ParseFluxNodeResourcesWithPolicy(
 	}
 	disks := make(map[string]map[string]diskResource)
 	for _, series := range response.Series {
+		if len(series.Columns) == 0 && len(series.Values) == 0 {
+			continue
+		}
 		index := make(map[string]int, len(series.Columns))
 		for columnIndex, name := range series.Columns {
 			if _, exists := index[name]; exists {
@@ -828,6 +831,9 @@ func ParseFluxPerformance(
 	var result []model.Performance
 	seen := make(map[string]struct{})
 	for _, series := range response.Series {
+		if len(series.Columns) == 0 && len(series.Values) == 0 {
+			continue
+		}
 		index := make(map[string]int, len(series.Columns))
 		for columnIndex, name := range series.Columns {
 			if _, exists := index[name]; exists {
@@ -865,7 +871,7 @@ func ParseFluxPerformance(
 			}
 			namespace, _ := fluxDimension(index, row, "namespace")
 			namespace = normalizeDimension(namespace, 128)
-			operation, _ := fluxDimension(index, row, "operation")
+			operation, _ := fluxDimension(index, row, "operation", "method", "id")
 			statusClass, _ := fluxDimension(index, row, "status_class")
 			quantile, _ := fluxDimension(index, row, "quantile", "percentile")
 			unit, _ := fluxDimension(index, row, "unit")
@@ -884,9 +890,11 @@ func ParseFluxPerformance(
 					return nil, scaleErr
 				}
 				switch field {
-				case "read", "read_rate", "read_bytes_per_second":
+				case "read", "read_rate", "read_bytes_per_second",
+					"total_read_requests_size":
 					value.Metric = model.PerformanceReadThroughput
-				case "write", "write_rate", "write_bytes_per_second":
+				case "write", "write_rate", "write_bytes_per_second",
+					"total_write_requests_size":
 					value.Metric = model.PerformanceWriteThroughput
 				default:
 					return nil, fmt.Errorf("performance throughput field is unsupported")
@@ -895,7 +903,10 @@ func ParseFluxPerformance(
 				value.Value = scaled
 			case "cq_performance_latency":
 				if value.Operation == "" {
-					value.Operation = normalizeOperation(field)
+					value.Operation = latencyOperation(operation)
+				}
+				if value.Quantile == "" {
+					value.Quantile = normalizeQuantile(field)
 				}
 				if value.Operation == "" || value.Quantile == "" {
 					return nil, fmt.Errorf("performance latency operation and quantile are required")
@@ -908,6 +919,17 @@ func ParseFluxPerformance(
 				value.StatusClass = ""
 				value.Value = scaled
 			case "cq_performance_transaction", "cq_performance_transaction_ns":
+				switch field {
+				case "failed_request_counter":
+					// The error measurement supplies separate 4xx and 5xx
+					// rates. Emitting this aggregate failure rate under either
+					// class would double count or misclassify requests.
+					continue
+				case "succeed_request_counter":
+				// Continue through the common status mapping below.
+				default:
+					return nil, fmt.Errorf("performance transaction field is unsupported")
+				}
 				if value.Operation == "" {
 					value.Operation = operationFromField(field)
 				}
@@ -917,10 +939,19 @@ func ParseFluxPerformance(
 				if value.StatusClass == "" {
 					value.StatusClass = statusClassFromField(field)
 				}
+				if value.StatusClass == "" {
+					return nil, fmt.Errorf("performance transaction status class is required")
+				}
 				value.Metric = model.PerformanceRequests
 				value.Quantile = ""
 				value.Value = number
 			case "cq_performance_error", "cq_performance_error_ns":
+				switch field {
+				case "system_errors", "user_errors", "server_error_counter",
+					"client_error_counter":
+				default:
+					return nil, fmt.Errorf("performance error field is unsupported")
+				}
 				if value.Operation == "" {
 					value.Operation = operationFromField(field)
 				}
@@ -1401,6 +1432,17 @@ func normalizeOperation(value string) string {
 	}
 }
 
+func latencyOperation(value string) string {
+	switch strings.ToLower(normalizeDimension(value, 64)) {
+	case "ttfb_read":
+		return "READ"
+	case "ttlb_write":
+		return "WRITE"
+	default:
+		return normalizeOperation(value)
+	}
+}
+
 func operationFromField(field string) string {
 	lower := strings.ToLower(field)
 	for _, operation := range []string{"delete", "get", "head", "post", "put", "read", "write"} {
@@ -1430,10 +1472,12 @@ func statusClassFromField(field string) string {
 	case strings.Contains(lower, "succeed"), strings.Contains(lower, "success"),
 		strings.Contains(lower, "2xx"):
 		return "2xx"
-	case strings.Contains(lower, "client"), strings.Contains(lower, "4xx"):
+	case strings.Contains(lower, "user_error"), strings.Contains(lower, "client"),
+		strings.Contains(lower, "4xx"):
 		return "4xx"
-	case strings.Contains(lower, "error"), strings.Contains(lower, "failed"),
-		strings.Contains(lower, "server"), strings.Contains(lower, "5xx"):
+	case strings.Contains(lower, "system_error"), strings.Contains(lower, "error"),
+		strings.Contains(lower, "failed"), strings.Contains(lower, "server"),
+		strings.Contains(lower, "5xx"):
 		return "5xx"
 	default:
 		return ""

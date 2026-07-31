@@ -83,14 +83,14 @@ func TestRepositoryFixtureContracts(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if jsonCount != 45 {
-		t.Errorf("fixture JSON count = %d, want 45", jsonCount)
+	if jsonCount != 52 {
+		t.Errorf("fixture JSON count = %d, want 52", jsonCount)
 	}
-	if manifestCount != 7 || fixtureCount != 37 {
-		t.Errorf("manifest count = %d fixture records = %d, want 7 and 37", manifestCount, fixtureCount)
+	if manifestCount != 7 || fixtureCount != 44 {
+		t.Errorf("manifest count = %d fixture records = %d, want 7 and 44", manifestCount, fixtureCount)
 	}
-	if fluxCount != 6 {
-		t.Errorf("Flux fixture count = %d, want 6", fluxCount)
+	if fluxCount != 13 {
+		t.Errorf("Flux fixture count = %d, want 13", fluxCount)
 	}
 }
 

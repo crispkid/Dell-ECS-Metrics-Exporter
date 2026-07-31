@@ -2,9 +2,9 @@
 ## Product & Integration Specification
 
 - **Version:** 1.0
-- **Status:** Working Baseline；待 Project Maintainer 完成正式 Gate 2／Gate 4 核准
-- **Active Change:** ECS-008
-- **Specification Date:** 2026-07-26
+- **Status:** v1.0.0-rc.1 Release Candidate；stable Gate 4 尚未核准
+- **Active Change:** ECS-012
+- **Specification Date:** 2026-08-01
 - **Scope:** Dell ECS API Exporter、Prometheus Metrics、Inventory API 與整合規格
 - **Implementation Baseline:** Go language 1.26.0；toolchain 1.26.5
 - **License:** Apache License 2.0
@@ -62,6 +62,37 @@ archives、checksums、SBOM、Critical/High vulnerability gate、keyless Sigstor
 仍必須 fail closed；不能由 synthetic result 或 workflow 定義本身推導 production
 approval。
 
+ECS-009 依 Dell 官方 Monitoring Guide 與授權實體 ECS 3.8.1.1 唯讀觀察修正
+Flux 契約：Node CPU、Memory、Network 與 conditional Disk 改為獨立 `keep()` /
+`last()` 查詢後原子合併；VDC performance 只接受精確 measurement/field，
+latency 以 `id=ttfb_read|ttlb_write` 映射 READ/WRITE，Namespace 僅輸出文件與
+實體 response 都證實的 transaction/error request-rate Gauge。未經證實的
+Namespace throughput/latency public families 已移除。`tls.verify` 預設仍為
+`true`，但企業自簽憑證可明確設定 `false`；正式環境不再因該選項拒絕啟動，
+Exporter 會記錄不含 endpoint 的 WARN。
+
+ECS-010 在無法取得 3.6/3.7/3.8.0 實體設備時建立分層驗證方式：以 Dell 官方
+文件比對 contract，以四 Profile synthetic fixture replay 驗證共同 mapping，並提供
+`ecs-flux-probe` 讓客戶、Dell 或合作夥伴在 exact-build appliance 執行相同的唯讀
+query/parser。Probe report 只含 build、Profile、policy、受控錯誤與 series 數量，
+省略 endpoint、credential/token、resource identity、原始 response 與 metric value。
+文件/fixture/CE/probe evidence 均不會自動提升 Profile certification。
+
+ECS-011 依使用者決策改採功能級跨版本驗證：同一 production path 功能只要在任一
+目標 ECS 版本取得真實 CE/appliance evidence，即視為 3.6、3.7、3.8.0、3.8.1 的
+共用功能均已驗證。已知版本差異、`unavailable` capability 與從未在任何版本產生
+必要欄位的功能不得繼承。`tested_builds` 與 `sandbox_certified` 繼續只記錄
+exact-build／完整 Profile 事實，不再限制共享功能驗證狀態。
+
+ECS-012 將第一個評估版本固定為 `v1.0.0-rc.1`。Prerelease tag 仍必須通過
+deterministic/race、container、Kubernetes schema、合成 target-scale、source/license、
+linux/amd64 與 linux/arm64 image scan、SBOM、keyless signing 及 OCI provenance，並以
+GitHub Pre-release 發布。GitHub-native attestation 依 repository plan 執行；private RC
+缺少平台支援時必須發布 signed boundary asset，stable 仍要求成功。只有帶 Semantic
+Version prerelease suffix 的 tag 可略過 exact
+ECS 3.8.1.4、exact CE 3.8.0.3、deployed E2E 與 deployed performance protected jobs；
+stable tag 缺少任一成功結果都不能發布。RC 不代表 production Gate 4。
+
 ### Requirement Index
 
 - **REQ-001 — Multi-cluster connection and authentication:** 支援至少一個、設計上至少
@@ -106,8 +137,8 @@ approval。
   完整成功資料、增加錯誤 metrics，並將相關 health 降為 `DEGRADED`。
 - Given Bucket 未設定 soft/hard quota，when 產生 metrics 與 Inventory response，
   then 不輸出對應 quota metric，欄位為 `null`，且 configured flag 為 `false`。
-- Given ECS 回傳區間 request count，when mapping Prometheus metric，then 使用 Gauge
-  或明確衍生 rate，不使用 `_total` Counter。
+- Given ECS 回傳非 `*_delta` request rate，when mapping Prometheus metric，then 使用
+  requests/second Gauge，不使用 `_total` Counter。
 - Given API 回傳缺少或 null 欄位，when 建立 internal model，then exporter 不崩潰、
   不填入推測值，並依 contract 回傳 null、略過 metric 或標記 collector error。
 - Given Inventory API query 超過 page limit 或不合法，when request 到達，then 不觸發
@@ -128,8 +159,25 @@ approval。
 - Given release prerequisite、scanner、runtime、exact-build endpoint、protected
   credential 或 reviewer evidence 缺少，when 執行 production release gate，then
   必須以 blocked/failed 結束，不得把 skip、fixture 或 synthetic precheck 當成通過。
-- Given Profile 只有文件衍生 fixture 而沒有 sandbox evidence，when 產生版本支援
-  資訊，then 不得將 build 標示為 tested/certified。
+- Given tag 含合法 Semantic Version prerelease suffix，when 執行 release workflow，
+  then 必須保留 RC 的程式、container/schema、供應鏈、signing/OCI provenance gates，
+  並標記 GitHub Pre-release；private RC 缺 native attestation 支援時發布 signed boundary
+  asset；given tag 為 stable，then native attestation、exact ECS/CE、deployed E2E 與
+  deployed performance jobs 必須全部成功後才能 publish。
+- Given 某功能已在任一目標 ECS 版本透過 production path 完成真實驗證，when 更新
+  支援矩陣，then 四個目標 Profile 都標示該功能為 `validated-shared`，不要求每個
+  版本重複相同功能測試。
+- Given 功能有已知版本差異、Profile 為 `unavailable` 或沒有任何 target-version
+  live evidence，when 套用共享驗證，then 不得標示為 `validated-shared`。
+- Given Profile 沒有 exact-build execution，when 更新 `tested_builds` 或
+  `sandbox_certified`，then 仍不得填入未執行或未完成完整 certification 的事實；
+  這兩欄與功能級共享驗證分離。
+- Given operator 執行相容性 Probe，when 產生或分享 report，then 只允許完整 build、
+  Profile/capability、受控 error type/HTTP status 與 series count；不得包含 endpoint、
+  credential/token、resource identity、raw response 或 metric value。
+- Given 四版本 fixture replay 或 ECS CE Flux 結果，when 更新版本特定能力，then
+  3.7/3.8.0 interval rates 仍為 unavailable，3.8.1 仍為 conditional；成功的
+  3.8.1.1 latest-snapshot 功能可依 ECS-011 繼承至其他 Profile。
 - Given capability 在 Profile 是 `conditional`，when cluster 未明列啟用，then
   Collector 不呼叫該 API、不更新該 domain cache，並以 `skipped` 而非 error/success
   cache refresh 呈現。
@@ -605,19 +653,18 @@ Exporter 應支援 Dell ECS 實際版本所提供的 Management API Authenticati
 
 ### 9.4.1 VDC 與 Namespace Performance Metrics
 
-Performance 值只保留 API 原始 VDC 或 Namespace scope，不展開成 Bucket。Throughput、
-latency 與來源 window request count 都是 Gauge：
+Performance 值只保留 API 原始 VDC 或 Namespace scope，不展開成 Bucket。Dell
+`monitoring_vdc` 的非 `*_delta` measurement 是 rate：VDC throughput、latency、
+request rate 與 Namespace request rate 都使用 Gauge。Namespace scope 沒有已證實的
+throughput/latency measurement，因此不輸出對應 family：
 
 | Metric | Type | Unit | Scope |
 |---|---|---|---|
 | `ecs_vdc_read_throughput_bytes_per_second` | Gauge | bytes/second | VDC |
 | `ecs_vdc_write_throughput_bytes_per_second` | Gauge | bytes/second | VDC |
 | `ecs_vdc_request_latency_seconds` | Gauge | seconds | VDC + operation + quantile |
-| `ecs_vdc_requests` | Gauge | count/window | VDC + operation + status_class |
-| `ecs_namespace_read_throughput_bytes_per_second` | Gauge | bytes/second | VDC + Namespace |
-| `ecs_namespace_write_throughput_bytes_per_second` | Gauge | bytes/second | VDC + Namespace |
-| `ecs_namespace_request_latency_seconds` | Gauge | seconds | VDC + Namespace + operation + quantile |
-| `ecs_namespace_requests` | Gauge | count/window | VDC + Namespace + operation + status_class |
+| `ecs_vdc_requests` | Gauge | requests/second | VDC + operation + status_class |
+| `ecs_namespace_requests` | Gauge | requests/second | VDC + Namespace + operation + status_class |
 
 ### 9.5 Bucket Metrics
 
@@ -1038,8 +1085,11 @@ ecs:
 - 支援 Environment Variable Override。
 - 支援 Secret File Reference。
 - `username`/`usernameFile` 與 `password`/`passwordFile` 各只能選一種。
-- production Cluster 不得停用 TLS verification；自訂 CA、server certificate/key 與
-  authentication token/credential files 必須在啟動時可讀。
+- TLS verification 預設啟用並建議搭配正確 CA/SAN。企業自簽憑證可明確設定
+  `tls.verify: false`，包括 production Cluster；Exporter 必須在啟動時輸出
+  cluster/environment WARN，且不得記錄 endpoint。此選項會停用憑證鏈與主機身分
+  驗證，必須由部署方承擔風險。自訂 CA、server certificate/key 與 authentication
+  token/credential files 必須在啟動時可讀。
 
 ---
 
@@ -1218,9 +1268,10 @@ Schema 與版本差異由 `DELL_ECS_API_MAPPING.md`、`profiles/` 與
 | Bucket Information | Bucket Collector | `ecs_bucket_used_bytes`、`ecs_bucket_objects` | `/api/v1/buckets` | 300 秒 | 約 2～5 KB／Bucket |
 | Bucket Soft／Hard Quota | Bucket Collector | `ecs_bucket_soft_quota_bytes`、`ecs_bucket_hard_quota_bytes` | `/api/v1/buckets` | 300 秒 | 約 1～2 KB／Bucket |
 | Bucket Performance | Performance Collector | 四個目標 Profile 均 `unavailable`；不得由 VDC/Namespace scope 展開 | 不提供 | 不排程 | 不適用 |
-| VDC/Namespace Performance | Performance Collector | VDC/Namespace throughput、latency、request/status-window Gauge；不得輸出為 Bucket metric | 不提供 Inventory performance resource | 依 Profile/capability | 需真機量測 |
-| S3 Request Statistics | Performance Collector | `ecs_vdc_requests`、`ecs_namespace_requests`，保留 operation/status_class 與來源 scope | 不提供 Bucket scope | 依 Profile/capability | 需真機量測 |
-| HTTP Status Statistics | Performance Collector | VDC/Namespace window Gauge；不得輸出為 Bucket status class | 不提供 Bucket scope | 依 Profile/capability | 需真機量測 |
+| VDC Performance | Performance Collector | VDC throughput、latency、request-rate Gauge；不得輸出為 Bucket metric | 不提供 Inventory performance resource | 依 Profile/capability | ECS 3.8.1.1 partial-live |
+| Namespace Performance | Performance Collector | `ecs_namespace_requests` request-rate Gauge；沒有已證實的 Namespace throughput/latency mapping | 不提供 Inventory performance resource | 依 Profile/capability | ECS 3.8.1.1 partial-live |
+| S3 Request Statistics | Performance Collector | `ecs_vdc_requests`、`ecs_namespace_requests`，保留 operation/status_class 與來源 scope | 不提供 Bucket scope | 依 Profile/capability | ECS 3.8.1.1 partial-live |
+| HTTP Status Statistics | Performance Collector | VDC/Namespace request-rate Gauge；不得輸出為 Bucket status class | 不提供 Bucket scope | 依 Profile/capability | ECS 3.8.1.1 partial-live |
 | Replication Status | Replication Collector | `ecs_replication_status`、`ecs_replication_lag_seconds` | `/api/v1/replications` | 120 秒 | 約 10～30 KB |
 | Recovery Status | Recovery Collector | `ecs_recovery_progress_ratio`、相關狀態 Metric | `/api/v1/replications` 或後續獨立 Recovery API | 120 秒 | 約 10 KB |
 | Exporter Health | Internal Health Collector | `ecs_exporter_api_requests_total`、`ecs_exporter_api_errors_total`、`ecs_exporter_cache_age_seconds`、`ecs_exporter_last_success_timestamp_seconds` 等 | `/health`、`/api/v1/health` | 每次 Collector 或 Scrape 更新 | 小於 5 KB |
@@ -1284,6 +1335,8 @@ Bucket API 資料量通常會隨 Bucket 數量線性增加，必須支援 Pagina
 - ECS 3.7/3.8.0 停用 Flux interval-derived rates；3.8.1 通過 live range gate 後才啟用。
 - ECS 3.8.0/3.8.1 transport 必須保留 configured hostname、TLS SNI 與 HTTP Host。
 - 未知版本預設拒絕；mixed-version 只允許 capability 交集。
+- 相容性 Probe 必須使用與 Exporter 相同 Profile/query/parser、只執行唯讀 API，並
+  產生去識別化 report；Probe 通過不是自動 certification。
 
 ---
 

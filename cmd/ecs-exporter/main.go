@@ -85,6 +85,7 @@ func run(arguments []string, stdout, stderr *os.File) error {
 	var clients []*ecs.Client
 	var runners []*collector.Runner
 	for _, clusterConfig := range settings.ECS.Clusters {
+		warnIfTLSVerificationDisabled(logger, clusterConfig)
 		client, err := ecs.NewClient(clusterConfig, settings.Collector, observer)
 		if err != nil {
 			return fmt.Errorf("initialize cluster %q: %w", clusterConfig.Name, err)
@@ -153,6 +154,17 @@ func run(arguments []string, stdout, stderr *os.File) error {
 		}
 	}
 	return runErr
+}
+
+func warnIfTLSVerificationDisabled(logger *slog.Logger, cluster config.ClusterConfig) {
+	if cluster.TLS.VerificationEnabled() {
+		return
+	}
+	logger.Warn(
+		"ECS TLS certificate verification is disabled",
+		"cluster", cluster.Name,
+		"environment", cluster.Environment,
+	)
 }
 
 type runtimeObserver struct {

@@ -11,8 +11,10 @@ required_files=(
   "deploy/bare-metal/install.sh"
   "deploy/prometheus/alerts.yaml"
   "docs/PRODUCTION_RUNBOOK.md"
+  "docs/RC_RELEASE_CHECKLIST.md"
   "docs/RELEASE_CHECKLIST.md"
   "scripts/release-build.sh"
+  "scripts/release-kind.sh"
   "scripts/supply-chain-check.sh"
 )
 for path in "${required_files[@]}"; do
@@ -31,6 +33,18 @@ if ! rg -q 'cosign sign --yes' .github/workflows/release.yml ||
   ! rg -q 'actions/attest@' .github/workflows/release.yml ||
   ! rg -q 'sbom-action@' .github/workflows/release.yml; then
   printf 'error: release workflow is missing signing, attestation, or SBOM policy\n' >&2
+  exit 1
+fi
+if [[ "$(./scripts/release-kind.sh v1.0.0)" != "stable" ]] ||
+  [[ "$(./scripts/release-kind.sh v1.0.0-rc.1)" != "prerelease" ]] ||
+  ! rg -Fq "if: needs.validate.outputs.release_kind == 'stable'" \
+    .github/workflows/release.yml ||
+  ! rg -Fq 'needs.validate.outputs.release_kind == '\''prerelease'\''' \
+    .github/workflows/release.yml ||
+  ! rg -Fq 'release_flags+=(--prerelease)' .github/workflows/release.yml ||
+  [[ "$(rg -c "if: needs.validate.outputs.release_kind == 'stable' \\|\\| github.event.repository.private == false" .github/workflows/release.yml)" -ne 6 ]] ||
+  ! rg -Fq 'github-attestation-boundary.txt' .github/workflows/release.yml; then
+  printf 'error: release workflow does not preserve stable gates and GitHub prerelease marking\n' >&2
   exit 1
 fi
 if ! rg -q 'ECS_CERT_EXPECTED_VERSION: "3\.8\.1\.4"' .github/workflows/release.yml ||
@@ -91,17 +105,40 @@ if [[ -z "$(git remote)" ]]; then
   exit 3
 fi
 if ! command -v jq >/dev/null 2>&1; then
-  printf 'blocked: jq is required to validate Profile certification evidence\n' >&2
+  printf 'blocked: jq is required to validate shared Profile feature evidence\n' >&2
   exit 3
 fi
-if ! jq -e '
-  (.version.tested_builds | index("3.8.1.4")) != null and
-  .evidence.sandbox_certified == true and
-  .evidence.status == "sandbox-verified" and
-  .evidence.api_reference_access == "downloaded-and-reviewed" and
-  .evidence.fixture_classification == "redacted-sandbox-derived"
-' profiles/ecs-3.8.1.json >/dev/null; then
-  printf 'blocked: ECS 3.8.1.4 Profile lacks reviewed formal certification evidence\n' >&2
+if ! jq -se '
+  [
+    "authentication",
+    "version_discovery",
+    "cluster_health",
+    "cluster_capacity",
+    "node_inventory",
+    "node_health",
+    "node_cpu_memory",
+    "node_network_counters",
+    "namespace_inventory",
+    "namespace_capacity",
+    "namespace_quota",
+    "namespace_performance",
+    "bucket_inventory",
+    "bucket_capacity",
+    "bucket_quota",
+    "vdc_performance",
+    "flux_latest_snapshot"
+  ] as $required |
+  all(.[];
+    .evidence.shared_validated_capabilities as $validated |
+    .evidence.feature_validation_policy == "shared-live-any-target-version" and
+    all($required[]; . as $capability | ($validated | index($capability)) != null)
+  )
+' \
+  profiles/ecs-3.6.json \
+  profiles/ecs-3.7.json \
+  profiles/ecs-3.8.0.json \
+  profiles/ecs-3.8.1.json >/dev/null; then
+  printf 'blocked: required cross-version shared feature validation evidence is incomplete\n' >&2
   exit 3
 fi
 

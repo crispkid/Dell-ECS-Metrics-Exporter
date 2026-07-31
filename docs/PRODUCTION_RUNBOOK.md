@@ -68,8 +68,9 @@ not resolved by continuous restarts.
 Use `cluster` and `collector` labels to isolate the source. Check:
 
 - DNS and TCP connectivity from the exporter to the ECS management endpoint;
-- certificate validity and the configured CA, without disabling TLS
-  verification;
+- certificate validity and the configured CA; if `tls.verify: false` is an
+  approved self-signed-certificate exception, confirm the expected startup
+  warning and the restricted management network path;
 - ECS monitor account status and `SYSTEM_MONITOR`/`SYSTEM_ADMIN` role;
 - HTTP 429/5xx trends, collector duration, and configured timeouts/rate limits;
 - whether the exact ECS build still selects the expected Profile.
@@ -116,8 +117,10 @@ metric parsing, cache freshness, and Prometheus target health.
 Stage new secret files with mode `0640` and ownership `root:ecs-exporter` for
 Bare Metal, or update the external secret in Kubernetes. Restart or roll the
 deployment, verify successful ECS login, then revoke the old credential. For CA
-rotation, install the new trust chain before ECS switches certificates. Never
-use `tls.verify: false` as a migration step.
+rotation, install the new trust chain before ECS switches certificates. When
+the organization intentionally uses `tls.verify: false`, record that exception,
+keep the ECS management path restricted, and verify the warning remains visible;
+return to `verify: true` after a valid trust chain and SAN are available.
 
 ## Backup and disaster recovery
 

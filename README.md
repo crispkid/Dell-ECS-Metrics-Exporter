@@ -5,46 +5,397 @@ Dell ECS Metrics Exporter 是以 Go 實作的唯讀、多叢集 Prometheus Expor
 再由 `/metrics` 與 `/api/v1` Inventory API 提供資料。Prometheus scrape 與 Inventory
 查詢只會讀取快取，不會直接觸發 ECS API request。
 
+## 快速導覽
+
+- [End-to-End 上線導覽](#end-to-end-上線導覽)
+- [選擇安裝方式](#1-選擇安裝方式)
+- [本機快速開始](#3-本機快速開始)
+- [完整設定說明](#5-完整設定說明)
+- [Prometheus 與 Inventory API](#6-prometheus-與-inventory-api)
+- [本機 Docker Prometheus 與 Grafana 測試](#本機-docker-prometheus-與-grafana-測試)
+- [Docker 安裝](#7-docker-安裝)
+- [Helm 安裝](#8-helm-安裝)
+- [Bare Metal/systemd 安裝](#9-bare-metalsystemd-安裝)
+- [維運與安全](#10-維運與安全)
+- [故障排除](#11-故障排除)
+- [開發、品質與發布](#12-開發品質與發布)
+- [相容性與已知限制](#13-相容性與已知限制)
+- [使用 Flux Probe 驗證實體 ECS](#使用-flux-probe-驗證實體-ecs)
+
 ## 目前狀態
 
-Repository 內可完成的 runtime、測試、部署範本與 release gate 已具備；目前仍是
-**pre-release**，不能視為已通過 production 認證。
+目前版本目標為 **v1.0.0-rc.1 Release Candidate**。Runtime、測試、部署範本與
+簽署發佈流程已具備，可供功能評估與整合測試；RC 不等於 `v1.0.0` 正式環境認證。
 
 | 項目 | 狀態 | 說明 |
 |---|---|---|
 | Exporter runtime | 已完成 | 多 Cluster 收集、快取、Prometheus metrics、Inventory API、health/readiness 與安全控制已實作 |
-| 本機品質驗證 | 已通過 | 2026-07-27 以可連線的 vulnerability database 執行完整 Harness；lint、format、typecheck、test、84.3% coverage、build、CI policy、security 與 deployment checks 全部通過，未發現 Go vulnerability |
+| 本機品質驗證 | 已通過 | ECS-012 的完整 Harness（lint、format、typecheck、test、84.7% coverage、build、CI policy、security、deployment）、fresh race、actionlint、RC build/checksums 與 10/100/10,000 合成規模測試已通過；tag workflow 與 stable external gates 仍分開驗證 |
 | ECS CE 3.6.2.0 | 部分實測 | Exact build 自動選擇 `ecs-3.6`；Management、known-size Bucket/quota/billing、Inventory/metrics 已通過；Flux `node-resources` 與 `performance` 回 HTTP 503，因此既有 live-certification gate 未通過 |
 | ECS CE 3.7.0.0 | 部分實測 | Exact build 自動選擇 `ecs-3.7`；Management、known-size Bucket、正值 quota、billing、Inventory/metrics 已通過；Flux `node-resources` 回 HTTP 503，readiness 為 `DEGRADED` |
 | ECS CE 3.8.0.3 | 部分實測 | Management、Bucket inventory/quota/billing 已以 non-empty data 驗證；Flux `node-resources` 仍受 CE 回 HTTP 503 限制 |
 | ECS CE 3.8.1.4 | 部分實測 | Exact build 自動選擇 `ecs-3.8.1`；Management、known-size Bucket/quota/billing、Inventory/metrics 已通過；Flux 仍回 HTTP 503 |
+| ECS 3.8.1.1 實體設備 | 部分實測 | Exact build 自動選擇 `ecs-3.8.1`；修正後 Exporter readiness 為 `UP`，五個 Node 的 CPU、RAM 與 Network metrics 已通過；Performance split query/空資料處理已驗證，TLS identity 與正式認證仍待完成 |
 | ECS 3.8.1.4 正式設備 | 待認證 | 正式發布前仍須以同一個 release candidate commit 完成 live API、fixtures、mapping 與 Profile evidence 審查 |
-| Production release | 尚未放行 | 還需 Git remote/tracked commit、protected environments、真實 E2E/效能/Kubernetes/systemd 驗證、外部 scanner database、簽章與人工 reviewer |
+| `v1.0.0-rc.1` | Release Candidate | Tag workflow 必須完成 deterministic/race、container、Kubernetes schema、合成規模、dependency/license、雙架構 image scan、SBOM、簽章與 OCI provenance，並標示為 GitHub Pre-release；private repository 的 GitHub-native attestation 限制會以 signed boundary asset 揭露 |
+| Stable `v1.0.0` | 尚未放行 | 還需正式 ECS 3.8.1.4、exact CE 3.8.0.3、tagged deployed E2E、實際效能與具名 maintainer/security reviewer gate |
 
-若要安裝並進行功能評估，請從[選擇安裝方式](#1-選擇安裝方式)開始；若要建立正式
-release，必須逐項完成 [Production Release Checklist](docs/RELEASE_CHECKLIST.md)。
+若要安裝並進行功能評估，請先閱讀
+[End-to-End 上線導覽](#end-to-end-上線導覽)，再從
+[選擇安裝方式](#1-選擇安裝方式)進入對應程序；若要建立正式 release，必須逐項完成
+[Production Release Checklist](docs/RELEASE_CHECKLIST.md)。
+RC 的必要條件與正式版保留門檻見
+[Release Candidate Checklist](docs/RC_RELEASE_CHECKLIST.md)。
 完整差距、證據與決策記錄於
+[ECS-012 v1.0.0-rc.1 Release Plan](plans/ECS-012.md)、
+[ECS-011 Cross-Version Feature Validation](docs/ecs-api/feature-validation.md)、
+[ECS-010 Layered Compatibility Validation Plan](plans/ECS-010.md)、
+[ECS-009 Compatibility Correction Plan](plans/ECS-009.md) 與
 [ECS-008 Production Readiness Plan](plans/ECS-008.md)。
 
 目前可辨識的版本範圍：
 
 | Profile | ECS 版本範圍 | 目前證據 |
 |---|---|---|
-| `ecs-3.6` | `>= 3.6.0.0`、`< 3.7.0.0` | 官方文件 mapping + synthetic fixtures + ECS CE 3.6.2.0 Management/known-size local partial live |
-| `ecs-3.7` | `>= 3.7.0.0`、`< 3.8.0.0` | 部分官方文件 + candidate mapping + synthetic fixtures + ECS CE 3.7.0.0 Management/known-size local partial live |
-| `ecs-3.8.0` | `>= 3.8.0.0`、`< 3.8.1.0` | 部分官方文件 + ECS CE 3.8.0.3 Management/非空 Bucket partial live fixtures + synthetic fixtures |
-| `ecs-3.8.1` | `>= 3.8.1.0`、`< 3.8.2.0` | 部分官方文件 + ECS CE 3.8.1.4 Management/known-size partial live fixtures + synthetic fixtures |
+| `ecs-3.6` | `>= 3.6.0.0`、`< 3.7.0.0` | 共用功能 `validated-shared`；3.6 Dashboard 與 interval/native 規則維持版本別處理 |
+| `ecs-3.7` | `>= 3.7.0.0`、`< 3.8.0.0` | 共用功能 `validated-shared`；Flux interval rate 維持 unavailable |
+| `ecs-3.8.0` | `>= 3.8.0.0`、`< 3.8.1.0` | 共用功能 `validated-shared`；Host Header 與 Flux interval policy 維持版本別處理 |
+| `ecs-3.8.1` | `>= 3.8.1.0`、`< 3.8.2.0` | 共用功能 `validated-shared`；Flux interval rate 維持 conditional |
 
-這些範圍代表程式可以選擇對應 Profile，不代表真機認證。四個 Profile 的
-`tested_builds` 目前仍為空，`sandbox_certified` 仍為 `false`。正式環境導入前，
-請依 [TEST_PLAN.md](TEST_PLAN.md) 在實際 ECS build 上完成相容性驗證。
+功能驗證採 `shared-live-any-target-version`：任一目標版本以 production path 完成
+真實驗證後，該功能即視為四個版本皆已驗證。完整清單與尚未在任何版本驗證的功能見
+[Cross-Version Feature Validation](docs/ecs-api/feature-validation.md)。`tested_builds` 與
+`sandbox_certified` 只保留 exact-build／完整 Profile 執行事實，不限制共享功能狀態。
 ECS CE 實測範圍與限制記錄於
 [ECS CE 3.8.0.3 Live Validation Record](docs/ecs-api/validation/ecs-ce-3.8.0.3-2026-07-25.md)
 與
-[ECS CE 3.8.1.4 Live Validation Record](docs/ecs-api/validation/ecs-ce-3.8.1.4-2026-07-26.md)。
+[ECS CE 3.8.1.4 Live Validation Record](docs/ecs-api/validation/ecs-ce-3.8.1.4-2026-07-26.md)，
+實體設備結果另見
+[ECS Appliance 3.8.1.1 Live Validation Record](docs/ecs-api/validation/ecs-appliance-3.8.1.1-2026-07-30.md)。
 3.6.2.0 與 3.7.0.0 的本次結果目前只有本機、已去識別化且被 Git 排除的
 `test-results/` evidence，尚未轉換成受審查的 committed fixtures 或 Profile
 certification evidence。
+
+## 使用 Flux Probe 驗證實體 ECS
+
+無法在本機取得 ECS 3.6、3.7 或 3.8.0 實體設備時，可把同一 commit 建置出的
+`ecs-flux-probe` 提供給客戶、Dell Support 或合作夥伴，在其 exact-build appliance
+執行。Probe 使用與 Exporter 相同的 client、Profile、collector、query 與 parser，
+但不會啟動服務或修改 ECS。
+
+先依本 README 建立 `config.yaml` 與外部 secret files，再執行：
+
+```bash
+./scripts/build.sh
+umask 077
+./dist/ecs-flux-probe \
+  -config config.yaml \
+  -profiles-dir profiles \
+  -cluster primary-ecs \
+  -performance=true \
+  -disk=false \
+  -timeout 2m \
+  > ecs-flux-probe.json
+```
+
+只有一個 Cluster 時可以省略 `-cluster`。Performance 預設開啟；Disk 預設關閉，
+要開啟必須先在 `nodeResources.filesystems` 設定明確 allowlist。Exit code `0` 表示
+所有啟用的 latest-snapshot 檢查完成；exit code `1` 時仍會產生 redacted JSON，供
+判讀 setup/bootstrap 或個別 API 失敗。
+
+Report 只包含完整 ECS build、選到的 Profile、version-specific capability policy、
+受控 error type/HTTP status 與各 mapping 的 series 數量。它不包含 endpoint、IP/DNS、
+帳號、密碼、Token、Node/VDC/Namespace/Bucket/filesystem identity、原始 response 或
+sample value。詳細欄位、分享方式與證據限制見
+[Flux Compatibility Probe Guide](docs/ecs-api/flux-probe.md)。
+
+Probe `passed` 可補充 exact-build regression evidence。共用功能狀態依
+`shared-live-any-target-version` 繼承；`tested_builds` 與 `sandbox_certified` 仍只記錄
+實際執行與完整 Profile certification，不得填入未執行的 build。
+
+## End-to-End 上線導覽
+
+本節把後續的安裝、設定、Prometheus 整合、驗收與維運章節串成一條可執行路徑。
+第一次導入時，建議先在隔離或測試環境完成本機驗證，再把相同的 ECS endpoint、
+CA、credential reference 與 collector policy 移到正式部署方式。
+
+### 資料流程
+
+```text
+Dell ECS Management / Monitoring API
+                  │  Exporter 依 collector interval 主動輪詢
+                  ▼
+          Exporter 記憶體快取
+             │            │
+             │            └── /api/v1/*  唯讀 Inventory API
+             └── /metrics
+                    │  Prometheus 依 scrape interval 讀取
+                    ▼
+             Prometheus TSDB
+                │       │
+                ▼       ▼
+             Grafana  Alertmanager
+```
+
+Prometheus scrape 與 Inventory API 都只讀取 Exporter 記憶體快取，不會因為查詢而
+即時觸發 ECS API request。Prometheus 的 scrape interval 可以短於 collector
+interval；在下一次 collector 成功前，Prometheus 會取得相同的快取值。
+
+### 上線階段與完成條件
+
+| 階段 | 執行內容 | 完成條件 |
+|---|---|---|
+| 1. 準備 ECS | 建立監控帳號、確認 DNS/TCP 4443、取得 CA | Exporter host/Pod 能解析並連線 ECS endpoint |
+| 2. 準備產物 | 從 source 建置評估版本，或驗證核准 release 的 checksum、簽章與 digest | Binary/image 與預定 commit、版本一致 |
+| 3. 建立 secrets | 建立 ECS username/password 與 Inventory token | Secret 不在 Git、log、image 或一般設定檔內 |
+| 4. 建立設定 | 填入 Cluster identity、endpoint、TLS、collector 與 capability policy | `-validate-config` 成功 |
+| 5. 部署 | 選擇本機、Docker、Helm 或 systemd | Process/Pod 穩定執行，無重啟循環 |
+| 6. Runtime 驗收 | 驗證 liveness、readiness、version、metrics 與 Inventory auth | 正式環境 readiness 為 `UP` |
+| 7. Prometheus 整合 | 建立 scrape target、查詢指標、載入告警 | `up{job="dell-ecs-metrics-exporter"} == 1` |
+| 8. 正式放行 | 完成相容性、容量、安全、rollback 與 reviewer gate | Release Checklist 全部完成，無 blocked/skipped gate |
+
+### 階段 1：準備 ECS 與網路
+
+每個 ECS Cluster 至少準備：
+
+1. Origin-only HTTPS Management endpoint，例如
+   `https://ecs-management.example.com`；設定中不可包含 path、query、fragment 或帳密。
+2. 建議具備 `SYSTEM_MONITOR` role 的唯讀帳號；`SYSTEM_ADMIN` 也可通過角色檢查，
+   但不符合最小權限原則。
+3. Exporter 執行環境到 ECS endpoint 的 DNS、TCP 4443 與 TLS 路徑；endpoint
+   明列其他 port 時才使用其他 port。
+4. 簽發 ECS server certificate 的 CA chain。若企業 ECS 使用無法建立 trust
+   chain 或 hostname/SAN 不匹配的自簽憑證，可明確設定 `tls.verify: false`；
+   這會停用憑證身分驗證並在啟動時產生 WARN，仍建議優先使用正確 CA。
+5. 若要收集 replication/recovery，準備明確的 replication group/link ID。
+
+Exporter 啟動 collector 前會讀取 ECS 版本並選擇相容性 Profile，再以
+`/user/whoami` 驗證角色。未知版本會 fail closed，不會自動套用最接近的 Profile。
+
+### 階段 2：選擇並驗證安裝產物
+
+`v1.0.0-rc.1` 的可下載檔案、checksums 與簽章 bundle 會發布於
+[GitHub Release](https://github.com/crispkid/Dell-ECS-Metrics-Exporter/releases/tag/v1.0.0-rc.1)。
+OCI image 的版本 tag 為
+`ghcr.io/crispkid/dell-ecs-metrics-exporter:1.0.0-rc.1`；部署時應在驗證後改 pin
+Release 頁面記錄的 immutable digest。若尚未取得發布產物，也可從 source 建置：
+
+```bash
+./scripts/check-toolchain.sh
+./scripts/build.sh
+```
+
+建置結果包含 `dist/ecs-exporter` 與唯讀相容性驗證工具
+`dist/ecs-flux-probe`；正式 release archive 也包含兩個同 commit binary。
+
+正式上線應使用內部核准或 release workflow 產生的不可變產物：
+
+- Linux 使用已驗證 checksum、Sigstore bundle 與 provenance 的 release archive。
+- Docker/Kubernetes 使用 immutable OCI image digest，不使用 `latest` 或可變 tag。
+- Helm 使用與 application image 相同 release/commit 的 Chart package。
+
+驗證 release 產物的命令見[發布產物驗證](#發布產物驗證)。RC 與從 source 建置都不
+代表已獲准正式上線；正式環境仍須完成 Production Release Checklist。
+
+### 階段 3：建立 secrets
+
+本機評估可建立不會提交到 Git 的檔案：
+
+```bash
+umask 077
+mkdir -p .local-secrets
+printf '%s\n' 'ecs-monitor-user' > .local-secrets/username
+openssl rand -hex 32 > .local-secrets/inventory-token
+bash -c 'umask 077; read -r -s -p "ECS password: " ecs_password; printf "%s" "$ecs_password" > .local-secrets/password; printf "\n"'
+chmod 600 .local-secrets/*
+```
+
+三個值的用途不同：
+
+| Secret | 使用者 | 用途 |
+|---|---|---|
+| ECS username | Exporter | 登入 ECS |
+| ECS password | Exporter | 登入 ECS |
+| Inventory token | Inventory client；metrics 受保護時也供 Prometheus 使用 | 呼叫 Exporter API |
+
+Production 請使用 Kubernetes Secret、企業 Secret Manager 或 systemd 受控檔案。
+不要把 password/token 放進 Git、Helm values、container image、shell argument 或
+未遮罩的 CI artifact。
+
+### 階段 4：建立與驗證設定
+
+若先採用內建預設值，最小設定可以保持簡短：
+
+```yaml
+security:
+  inventoryApi:
+    tokenFile: .local-secrets/inventory-token
+
+ecs:
+  clusters:
+    - name: primary-ecs
+      site: primary-dc
+      environment: production
+      endpoint: https://ecs-management.example.com
+      usernameFile: .local-secrets/username
+      passwordFile: .local-secrets/password
+      tls:
+        verify: true
+        caFile: ""
+```
+
+這會沿用 `:8080`、`/metrics`、15 分鐘 stale tolerance、1 小時 max stale、
+預設 retry/rate limit 及 collector intervals。使用 private CA 時將 `caFile`
+指向 process、container 或 Pod 內實際可讀的檔案。完整範例與所有調整項目見
+[完整設定說明](#5-完整設定說明)。
+
+啟動前執行離線驗證：
+
+```bash
+./dist/ecs-exporter \
+  -config config.yaml \
+  -profiles-dir profiles \
+  -validate-config
+```
+
+這一步驗證 YAML、secret/CA file、Profile 與欄位約束，但不連線 ECS。成功後仍須
+透過 runtime readiness 與 live certification 證明真實連線及 response contract。
+
+### 階段 5：部署 Exporter
+
+依執行環境選擇一種方式，不需要全部執行：
+
+| 環境 | 建議方式 | 詳細步驟 |
+|---|---|---|
+| 開發、相容性評估 | 本機 binary | [本機快速開始](#3-本機快速開始) |
+| 本機視覺化與 scrape 測試 | Docker Prometheus + Grafana | [本機 Docker Prometheus 與 Grafana 測試](#本機-docker-prometheus-與-grafana-測試) |
+| 已有 Docker/OCI runtime | Read-only container | [Docker 安裝](#7-docker-安裝) |
+| Kubernetes | Helm Chart + existing Secret | [Helm 安裝](#8-helm-安裝) |
+| Linux VM/實體機 | Hardened systemd service | [Bare Metal/systemd 安裝](#9-bare-metalsystemd-安裝) |
+
+Production 預設維持單一 replica。每個 replica 都會獨立輪詢 ECS；在 target-scale
+測試與 ECS API 負載未核准前，不要只為高可用而增加 replica 數。
+
+### 階段 6：Runtime 驗收
+
+部署後依序檢查：
+
+```bash
+export ECS_EXPORTER_URL=http://127.0.0.1:8080
+
+curl --fail --silent --show-error "${ECS_EXPORTER_URL}/health"
+curl --silent --show-error "${ECS_EXPORTER_URL}/api/v1/version"
+curl --silent --show-error "${ECS_EXPORTER_URL}/api/v1/health"
+curl --fail --silent --show-error "${ECS_EXPORTER_URL}/metrics" |
+  rg '^(ecs_exporter_build_info|ecs_exporter_cache_age_seconds|ecs_cluster_health)'
+```
+
+再驗證 Inventory authentication：
+
+```bash
+inventory_token="$(tr -d '\r\n' < .local-secrets/inventory-token)"
+curl --fail --silent --show-error \
+  -H "Authorization: Bearer ${inventory_token}" \
+  "${ECS_EXPORTER_URL}/api/v1/clusters"
+unset inventory_token
+unset ECS_EXPORTER_URL
+```
+
+驗收判讀：
+
+- `/health` HTTP 200 只代表 process 存活。
+- 啟動初期 `/api/v1/health` 回 HTTP 503／`DOWN` 是正常的，因必要快取尚未初始化。
+- 所有必要 collector 成功後，正式環境必須為 HTTP 200／`UP`。
+- `DEGRADED` 仍能提供舊快取，但代表 collector error 或 stale data，需要調查；
+  除非是文件明列的測試例外，不可作為 production 放行結果。
+- `/api/v1/version` 的版本、commit 與 Profile 必須和核准的部署紀錄一致。
+- 未帶 token 或帶錯 token 的 Inventory request 必須回 HTTP 401。
+
+目標 ECS build 的唯讀 live smoke procedure 見
+[使用真實 ECS 執行唯讀相容性檢查](#使用真實-ecs-執行唯讀相容性檢查)。
+
+### 階段 7：接入 Prometheus 與告警
+
+非 Kubernetes 或未使用 Prometheus Operator 時，在 `prometheus.yml` 加入：
+
+```yaml
+scrape_configs:
+  - job_name: dell-ecs-metrics-exporter
+    scrape_interval: 30s
+    scrape_timeout: 10s
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - ecs-exporter.example.com:8080
+```
+
+先用 `promtool check config` 驗證 Prometheus 設定，再依既有部署方式 reload/restart。
+在 Prometheus Targets 頁面或 API 確認 target 為 `UP`，並執行：
+
+```promql
+up{job="dell-ecs-metrics-exporter"}
+```
+
+```promql
+max by (cluster, collector) (ecs_exporter_cache_age_seconds)
+```
+
+```promql
+increase(ecs_exporter_collector_errors_total[15m])
+```
+
+若設定 `prometheus.protected: true`，Prometheus 必須使用 Inventory token 或經過受信任
+reverse proxy；token 應由 Prometheus 的 secret file 機制提供，不要直接寫入
+`prometheus.yml`。目前 Helm Chart 的 ServiceMonitor 不會注入 Bearer token，
+因此 Kubernetes 預設採未受 HTTP authentication 保護的 `/metrics`，並以
+NetworkPolicy/內部網路限制來源；若安全政策要求 HTTP authentication，需改用受控的
+額外 scrape 設定、reverse proxy，或先擴充 Chart 契約。
+
+Prometheus Operator 環境將 `serviceMonitor.enabled` 設為 `true`，並以
+`serviceMonitor.additionalLabels` 符合 Prometheus 的 `serviceMonitorSelector`。
+Operator 產生的 `job` label 可能不是 `dell-ecs-metrics-exporter`；請以實際 label
+同步調整告警 selector，避免 Exporter 正常但 `DellECSExporterDown` 誤報。
+
+載入告警範例：
+
+```yaml
+rule_files:
+  - /etc/prometheus/rules/dell-ecs-metrics-exporter.yaml
+```
+
+將 `deploy/prometheus/alerts.yaml` 放到上述路徑，執行：
+
+```bash
+promtool check rules deploy/prometheus/alerts.yaml
+```
+
+再 reload Prometheus，確認規則群組 `dell-ecs-metrics-exporter` 已載入。告警門檻以
+預設 `staleTolerance: 15m`、`maxStale: 1h` 為基礎；修改 cache policy 時必須同步
+調整規則。
+
+### 階段 8：正式放行與持續使用
+
+正式上線前至少確認：
+
+- [ ] 使用 immutable digest 或已驗證 checksum/signature 的 release archive。
+- [ ] 實際 ECS exact build 已依政策完成 Profile 與 API contract 驗證。
+- [ ] ECS TLS verification 已開啟並驗證 CA/hostname/SAN/Host/SNI/proxy，或
+  `tls.verify: false` 自簽憑證例外已獲核准、記錄風險並限制管理網路路徑。
+- [ ] ECS 帳號採最小權限，所有 secret 都由核准的 secret mechanism 提供。
+- [ ] `/health`、`/api/v1/health`、`/api/v1/version`、`/metrics` 與 Inventory auth 通過。
+- [ ] Prometheus target 為 `UP`，cache age、collector/API error 與 ECS domain metrics 可查詢。
+- [ ] 告警已載入並測試通知路徑，job label 與實際 scrape labels 一致。
+- [ ] 資源限制、cardinality、scrape size、ECS API 負載與 target-scale 結果可接受。
+- [ ] 設定、CA、alert rules 與 secret reference 已納入備份；記憶體 cache 不需備份。
+- [ ] Credential/CA rotation、restart、rollback 與事故處理已演練。
+- [ ] [Production Release Checklist](docs/RELEASE_CHECKLIST.md) 無未完成、
+      blocked 或 skipped gate，並取得必要 reviewer 核准。
+
+上線後以 `ecs_exporter_cache_age_seconds`、`ecs_exporter_collector_errors_total`、
+`ecs_exporter_api_errors_total` 與 `up` 監控 Exporter 本身，再使用 `ecs_cluster_*`、
+`ecs_node_*`、`ecs_namespace_*`、`ecs_bucket_*` 等指標監控 ECS。事故處理、
+安全 restart/rollback、credential/CA rotation 與災難復原見
+[Production Runbook](docs/PRODUCTION_RUNBOOK.md)。
 
 ## 功能摘要
 
@@ -206,8 +557,18 @@ tls:
   caFile: certs/ecs-ca.pem
 ```
 
-不要在 production 設定 `verify: false`。設定驗證會拒絕
-`environment: production` 搭配關閉 TLS verification。
+企業自簽憑證無法透過 `caFile` 驗證時，可明確設定：
+
+```yaml
+tls:
+  verify: false
+  caFile: ""
+```
+
+此設定在 `environment: production` 也允許，但會同時停用憑證鏈與
+hostname/SAN 驗證。Exporter 啟動時會以 cluster/environment 記錄 WARN，且不記錄
+endpoint。請限制 Exporter 到 ECS 的網路路徑並將此選擇納入風險審查；預設與建議值
+仍是 `verify: true`。
 
 ### 步驟 3：選擇 replication/recovery 目標
 
@@ -668,8 +1029,9 @@ Inventory 則回傳 `null` 並將對應 `*QuotaConfigured` 設為 `false`。
 
 ```yaml
 scrape_configs:
-  - job_name: dell-ecs
+  - job_name: dell-ecs-metrics-exporter
     scrape_interval: 30s
+    scrape_timeout: 10s
     metrics_path: /metrics
     static_configs:
       - targets:
@@ -677,7 +1039,9 @@ scrape_configs:
 ```
 
 若設定 `prometheus.protected: true`，Prometheus 必須送出相同的 Bearer token，或經過
-已設定的 trusted reverse proxy。
+已設定的 trusted reverse proxy。`deploy/prometheus/alerts.yaml` 的 Exporter down
+規則預設比對 `job="dell-ecs-metrics-exporter"`；若使用其他 job name 或
+Prometheus Operator 產生不同 label，必須同步調整告警 selector。
 
 ### 主要 metrics
 
@@ -690,8 +1054,9 @@ scrape_configs:
   `ecs_namespace_buckets`、`ecs_namespace_objects`
 - Bucket：`ecs_bucket_used_bytes`、`ecs_bucket_soft_quota_bytes`、
   `ecs_bucket_hard_quota_bytes`、`ecs_bucket_objects`
-- Performance：`ecs_vdc_*` 與 `ecs_namespace_*` throughput/latency/requests Gauge；
-  不提供 Bucket-scope performance
+- Performance：VDC throughput/latency/request-rate Gauge，以及
+  `ecs_namespace_requests` request-rate Gauge；ECS 文件與 3.8.1.1 實測都沒有
+  Namespace throughput/latency mapping，也不提供 Bucket-scope performance
 - Replication/recovery：`ecs_replication_status`、`ecs_replication_lag_seconds`、
   `ecs_recovery_progress_ratio`
 - Exporter：`ecs_exporter_api_*`、`ecs_exporter_collector_*`、
@@ -702,9 +1067,72 @@ scrape_configs:
 完整名稱、型別、unit 與 label contract 請參閱
 [SPECIFICATION.md](SPECIFICATION.md) 第 9 節。
 
+### 本機 Docker Prometheus 與 Grafana 測試
+
+Repository 提供獨立的本機觀測 stack，讓 Prometheus 擷取 host port 8080 上的
+Exporter，並讓 Grafana 自動使用該 Prometheus datasource。Stack 不包含 ECS
+credential，也不會部署 Exporter；Exporter 可使用本機 binary，或另一個已將
+container port 8080 發布到 host port 8080 的 container。
+
+先確認 Exporter：
+
+```bash
+curl --fail --silent --show-error http://127.0.0.1:8080/health
+curl --fail --silent --show-error http://127.0.0.1:8080/metrics |
+  rg '^ecs_exporter_build_info'
+```
+
+再從 repository 根目錄啟動：
+
+```bash
+docker compose -f deploy/local/compose.yaml config --quiet
+docker compose -f deploy/local/compose.yaml pull
+docker compose -f deploy/local/compose.yaml up -d
+docker compose -f deploy/local/compose.yaml ps
+```
+
+預設服務：
+
+| Service | URL | 說明 |
+|---|---|---|
+| Prometheus | <http://127.0.0.1:9090> | 保留七天本機測試資料 |
+| Prometheus targets | <http://127.0.0.1:9090/targets> | Exporter target 應為 `UP` |
+| Grafana | <http://127.0.0.1:3000> | 匿名 Viewer；可暫時使用 Explore、不可儲存；只綁定 loopback |
+
+Prometheus 每 15 秒抓取
+`host.docker.internal:8080/metrics`，Compose 同時建立 Linux `host-gateway`
+mapping。Grafana 已 provision `http://prometheus:9090` 為預設 datasource；開啟
+**Explore** 即可執行本章的 PromQL。V1 仍不交付 Grafana Dashboard JSON 或
+Dashboard provisioning。
+
+驗證整合：
+
+```bash
+curl --fail --silent --show-error --get \
+  --data-urlencode 'query=up{job="dell-ecs-metrics-exporter"}' \
+  http://127.0.0.1:9090/api/v1/query |
+  jq .
+```
+
+結果 value 應為 `1`。停止並保留資料：
+
+```bash
+docker compose -f deploy/local/compose.yaml down
+```
+
+完整的設定驗證、自訂 ports、Grafana Explore 查詢、故障排除與資料清除說明見
+[Local Prometheus and Grafana test stack](deploy/local/README.md)。
+
 ## 7. Docker 安裝
 
-Repository 尚未宣告公開 registry image，請先自行建置：
+Release Candidate 可先拉取版本化 image：
+
+```bash
+docker pull ghcr.io/crispkid/dell-ecs-metrics-exporter:1.0.0-rc.1
+```
+
+若 registry visibility 尚未對目前帳號開放，或要驗證未發布的 source commit，才自行
+建置：
 
 ```bash
 docker build -t dell-ecs-metrics-exporter:dev .
@@ -748,7 +1176,7 @@ docker run --rm \
   -p 8080:8080 \
   --mount type=bind,src="$PWD/config.container.yaml",dst=/etc/ecs-exporter/config.yaml,readonly \
   --mount type=bind,src="$PWD/.local-secrets",dst=/var/run/secrets/ecs-exporter,readonly \
-  dell-ecs-metrics-exporter:dev
+  ghcr.io/crispkid/dell-ecs-metrics-exporter:1.0.0-rc.1
 ```
 
 Private CA 額外加入：
@@ -770,11 +1198,10 @@ Image 內建 `/profiles`，預設 command 會使用：
 
 ### 步驟 1：準備可由 Kubernetes 拉取的 image
 
-以實際 registry、repository 與 tag 取代範例：
+Release Candidate image：
 
 ```bash
-docker build -t registry.example.com/observability/dell-ecs-metrics-exporter:0.2.0 .
-docker push registry.example.com/observability/dell-ecs-metrics-exporter:0.2.0
+docker pull ghcr.io/crispkid/dell-ecs-metrics-exporter:1.0.0-rc.1
 ```
 
 正式發布建議改用 immutable digest。
@@ -804,8 +1231,8 @@ kubectl -n monitoring create secret generic ecs-exporter-credentials \
 
 ```yaml
 image:
-  repository: registry.example.com/observability/dell-ecs-metrics-exporter
-  tag: 0.2.0
+  repository: ghcr.io/crispkid/dell-ecs-metrics-exporter
+  tag: 1.0.0-rc.1
   pullPolicy: IfNotPresent
 
 credentials:
@@ -902,6 +1329,16 @@ caFile: /etc/ecs-exporter/certs/ecs-ca.pem
 ```
 
 ### 步驟 5：先 lint/render，再安裝
+
+若不是從 source checkout 執行，先下載 RC 的 OCI Chart，並把下列命令中的
+`charts/dell-ecs-metrics-exporter` 改成 `/tmp/ecs-exporter-chart/dell-ecs-metrics-exporter`：
+
+```bash
+helm pull oci://ghcr.io/crispkid/charts/dell-ecs-metrics-exporter \
+  --version 1.0.0-rc.1 \
+  --untar \
+  --untardir /tmp/ecs-exporter-chart
+```
 
 ```bash
 helm lint charts/dell-ecs-metrics-exporter \
@@ -1127,7 +1564,8 @@ credential/CA rotation 與災難復原步驟見
 - 確認 `caFile` 是簽發 ECS server certificate 的 CA chain，不是 server private key。
 - 確認 container/Pod 內的路徑與 mount path 完全一致。
 - 確認 endpoint hostname 存在於 certificate SAN。
-- 不要以 production `verify: false` 規避問題。
+- 若企業自簽憑證確實無法建立上述 trust/SAN，可明確使用 `verify: false`；確認啟動
+  WARN、限制管理網路，並記錄停用伺服器身分驗證的風險。
 
 ### Authentication 失敗或 HTTP 401
 
@@ -1160,9 +1598,12 @@ metric，也不會用 Cluster capacity 或 0 代替。請查詢 Inventory 的
 ### Performance 或 node disk metric 不存在
 
 - ECS 3.7/3.8.0 會停用受已知 Flux range 問題影響的 interval-derived rates。
-- Profile 為 `conditional` 時，必須先在目標 build 完成驗證，再於
+- Profile 為 `conditional` 時，該功能若已列於 shared validation，可直接依部署需求在
   `capabilities.enabledConditional` 明列 `vdc_performance`／
-  `namespace_performance`；預設保持停用。
+  `namespace_performance`；版本特定且未列入 shared validation 的 capability 仍須個別
+  驗證，預設保持停用。
+- ECS `monitoring_vdc` 只提供 VDC throughput/latency 與 Namespace
+  transaction/error request rates；Namespace throughput/latency 不會輸出。
 - Bucket-scope performance 在四個 Profile 都是 unavailable。
 - Node disk 必須同時啟用 `node_disk_capacity` 並提供經驗證的
   `nodeResources.filesystems` allowlist。
@@ -1207,8 +1648,9 @@ bash -lc 'source scripts/go-env.sh; go test -race -timeout=3m ./...'
 ```
 
 目前 coverage gate 為 80%。`security` stage 需要連線 Go 官方 vulnerability database；
-2026-07-27 的本機完整 `verify` 已在可連線環境通過，coverage 為 84.3%，
-`govulncheck` 未發現 vulnerability。該次 deployment check 因本機未安裝
+最新 ECS-010 驗證結果以本次 handoff 與
+[ECS-010 plan](plans/ECS-010.md)為準。先前可連線的完整驗證不會替代目前工作樹的
+required security stage。Deployment check 在本機未安裝
 `systemd-analyze`、`promtool` 與 `kubeconform`，只完成對應的 strict static checks；
 這不取代真實 systemd host、Prometheus、container 或 Kubernetes runtime evidence。
 
@@ -1217,6 +1659,13 @@ Production 發布的 fail-closed 總入口：
 ```bash
 RELEASE_VERSION=v1.0.0 ./scripts/release-check.sh
 ```
+
+`v1.0.0-rc.1` 是評估用 Pre-release。Tag workflow 對 RC 執行 deterministic/race、
+container、Kubernetes schema、合成 target-scale、dependency/license、雙架構 image
+scan、SBOM、簽章、provenance 與 artifact publication；正式 ECS、deployed E2E 與
+deployed performance protected jobs 只可由帶 prerelease suffix 的版本略過。沒有 suffix
+的 `v1.0.0` 仍必須全部通過，詳細分流見
+[Release Candidate Checklist](docs/RC_RELEASE_CHECKLIST.md)。
 
 Release host 另外需要 Docker daemon、`kubeconform` v0.7.0、Syft v1.44.0、
 Grype v0.112.0、OSV-Scanner v2.3.8、Cosign 與可連線的 vulnerability/license
@@ -1230,7 +1679,7 @@ Git remote、Docker/Kubernetes、真實 ECS 或受保護 credential 等前置條
 發布失敗，不是 skip。逐項人工與自動條件見
 [Production Release Checklist](docs/RELEASE_CHECKLIST.md)。
 
-GitHub tag release 另外使用 `ecs-certification`、`ecs-ce-compatibility`、
+Stable GitHub tag release 另外使用 `ecs-certification`、`ecs-ce-compatibility`、
 `ecs-e2e`、`ecs-performance` 與 `release` 五個 protected environments。CE gate
 固定驗證 exact `3.8.0.3`；只有 readiness reason 為 `collector_error` 且唯一正值
 collector error 是已知的 `node-resources` 時才允許 `DEGRADED`。建立 tag 前，需先
@@ -1238,18 +1687,19 @@ collector error 是已知的 `node-resources` 時才允許 `DEGRADED`。建立 t
 環境；workflow 會比對 `/api/v1/version` 的 commit，任何舊 deployment 都會阻擋
 publish。
 
-建立 production tag 前，還必須先由人工審查正式設備與官方 REST API evidence，
-將 `profiles/ecs-3.8.1.json` 的 exact `3.8.1.4` `tested_builds`、API reference、
-redacted fixture classification 與 certification 狀態完整更新；release policy 會
-阻擋目前仍為未認證的 Profile。Tag workflow 的正式設備 job 是同一 commit 的再次
-驗證，不取代 tag 前的證據審查。
+建立 production tag 前，release policy 會確認必要功能都列於四個 Profile 的
+`shared_validated_capabilities`。Tag workflow 仍會在正式 3.8.1.4 執行同一 commit 的
+部署 smoke/E2E，這是環境與 release candidate 驗證，不再重複要求每個版本對相同功能
+各自完成認證。
 
 ### 發布產物驗證
 
 Release workflow 會發布 checksums、Sigstore bundle、各平台
-(`linux/amd64`、`linux/arm64`) SBOM、GitHub provenance attestation、Helm package，
-以及以 digest 識別的 multi-architecture OCI image。將範例中的 owner、repository、
-version 與 digest 換成實際 release：
+(`linux/amd64`、`linux/arm64`) SBOM、OCI provenance、Helm package，以及以 digest
+識別的 multi-architecture OCI image。Public 或 GitHub Enterprise Cloud repository
+另外產生 GitHub-native attestations；不具 Enterprise Cloud 的 private RC 會發布已簽署
+`github-attestation-boundary.txt`，stable 仍要求 native attestation 成功。將範例中的
+owner、repository、version 與 digest 換成實際 release：
 
 ```bash
 sha256sum --check SHA256SUMS
@@ -1278,20 +1728,24 @@ gh attestation verify ./dell-ecs-metrics-exporter_VERSION_linux_amd64.tar.gz \
 ```
 
 macOS 可用 `shasum -a 256 -c SHA256SUMS`。驗證成功後仍須確認
-`release-metadata.json` 的 full commit、版本與核准紀錄一致。
+`release-metadata.json` 的 full commit、版本與核准紀錄一致。最後一個 `gh attestation`
+命令只適用於 release 產生 GitHub-native attestation 的 repository。
 
 ## 13. 相容性與已知限制
 
 - Profile、mapping 與 fixtures 位於 `profiles/`、`docs/ecs-api/`、
   `testdata/ecs/`。
-- ECS 3.7/3.8.0 Management mappings 尚需以需登入 Dell Support 才能取得的版本文件
-  與真機 response 比對。
+- ECS 3.7/3.8.0 REST API 文件仍可補強版本差異，但已由其他目標版本真實驗證的共用
+  功能狀態為 `validated-shared`。
+- `ecs-flux-probe` 可補充 exact-build regression evidence；3.6/3.7/3.8.0 reports 不再是
+  共用功能驗證的必要條件。
 - Production gate、release workflow、SBOM/provenance/signing、container、
   Kubernetes schema、live/E2E 與 10 Cluster/10,000 Bucket 效能入口已實作；目前仍
   缺正式 ECS 3.8.1.4；ECS CE 3.8.1.4 只有 partial-live Management evidence，不能
-  取代正式設備 Flux/multi-VDC 驗證；另缺測試 ECS CE 3.8.0.3 protected rerun、target-scale
-  deployment、Docker daemon、live Kubernetes、外部 vulnerability database 與
-  實際 Git release 的通過證據。
+  取代正式設備認證。ECS 3.8.1.1 實體設備已部分證實 Node/Performance Flux
+  contract，但尚未涵蓋 non-zero workload、range/failure、verified TLS 與 multi-VDC；
+  另缺測試 ECS CE 3.8.0.3 protected rerun、target-scale deployment、Docker daemon、
+  live Kubernetes、外部 vulnerability database 與實際 Git release 的通過證據。
 - 使用者必須在實際環境驗證 schema、unit、pagination、token lifecycle、Host/SNI、
   response size 與 API latency。
 - 正式部署請使用 immutable image digest、外部 Secret Manager、受控 NetworkPolicy

@@ -1,6 +1,144 @@
 # Test Plan
 
-Active Change: ECS-008
+Active Change: ECS-012
+
+## ECS-012 Release Candidate Verification
+
+Deterministic cases:
+
+- `v1.0.0` classifies as `stable` and `v1.0.0-rc.1` classifies as `prerelease`; malformed or
+  non-v-prefixed versions fail closed.
+- Exact ECS 3.8.1.4, exact CE 3.8.0.3, deployed E2E and deployed performance jobs execute only
+  for stable tags.
+- Publish may proceed for a successful prerelease validation, but a stable tag requires all four
+  external job results to be successful.
+- RC publication uses GitHub Pre-release and the reviewed `docs/releases/v1.0.0-rc.1.md` notes.
+- Both release kinds retain source/license scanning, two-platform image scanning, SBOM,
+  checksums, keyless signing and OCI provenance. Private RC uses a signed boundary asset when
+  GitHub-native attestations are unavailable; stable still requires native attestation success.
+- Final tree passes Harness self-test, doctor, governance doctor, verify, fresh race,
+  deterministic RC build, credential scan and diff review.
+
+Required external evidence:
+
+- The pushed tag workflow completes and makes the GitHub Pre-release, assets, GHCR image/Chart,
+  signatures, SBOMs and OCI provenance observable, plus either native GitHub attestations or the
+  private-RC signed boundary asset.
+- Workflow failure or unavailable repository authorization is a release blocker, not a pass.
+- Stable-only ECS/deployed/reviewer evidence remains pending and must be disclosed in RC notes.
+
+Current verification result:
+
+- Harness self-test/doctor/governance/verify passed with 84.7% coverage and no known Go
+  vulnerabilities. Fresh race and synthetic 10/100/10,000 checks passed.
+- actionlint v1.7.12 accepted workflow schema/expressions; only the intentional custom self-hosted
+  labels required the documented local ignore.
+- The pre-commit RC build generated all four archives, Helm package, metadata and valid checksums;
+  both executables and the ECS 3.8.1 Profile were present in the Linux archive.
+- Docker daemon, local kubeconform and external SBOM scanners are unavailable locally. The tag
+  workflow must pass those gates before publication; tag-workflow execution remains pending.
+
+## ECS-011 Cross-Version Shared Feature Validation
+
+Deterministic cases:
+
+- 四個 Profile 都宣告 `feature_validation_policy=shared-live-any-target-version`。
+- `shared_validated_capabilities` 包含已取得任一 target-version live evidence 的功能。
+- Shared list 引用不存在、重複、空白或 `unavailable` capability 時 Profile loader 拒絕。
+- Shared list 不包含 Node service/process、Disk、Flux interval、replication status/lag、
+  recovery progress 或 unavailable Bucket performance。
+- 3.7/3.8.0 interval rate 仍為 unavailable，3.8.1 仍為 conditional；共享驗證不能覆寫。
+- Release policy 檢查共享功能集合，不要求虛構 exact 3.8.1.4 `tested_builds`。
+
+Optional version-specific regression evidence after ECS-011:
+
+- 新功能只有在至少一個目標 ECS 版本取得 qualifying live production-path evidence 後，
+  才能加入 shared list。
+- Exact-build smoke、部署、供應鏈、效能與 reviewer approval 仍依 release gate 執行，
+  但不重複決定已共享驗證的 API 功能狀態。
+
+Current verification result:
+
+- Four Profile validation passed with 17 identical shared capabilities each.
+- Invalid policy and unavailable shared capability regressions passed.
+- Fresh race suite and complete Harness passed; coverage is 84.7% and the security stage found
+  no known Go vulnerabilities.
+
+## ECS-010 Portable Flux Probe and Layered Compatibility Verification
+
+Deterministic cases:
+
+- `ecs-3.6`、`ecs-3.7`、`ecs-3.8.0`、`ecs-3.8.1` version fixtures 必須選到對應
+  Profile，並保留 interval policy `native/unavailable/unavailable/conditional`。
+- 四版本都重用 production split CPU/Memory/Network 與 VDC core/latency/Namespace
+  request parser；expected Performance records 為 12。
+- HTTP 200 all-null placeholder 是成功空視窗；HTTP 503 是 `partial` 且 report 只含
+  safe error type/status。
+- Serialized report 不得包含 fixture Cluster、IP、hostname、Node ID、VDC、Namespace、
+  raw metric value、endpoint、credential 或 token。
+- Disk 預設停用；`-disk=true` 沒有 filesystem allowlist 必須 fail closed，有 allowlist
+  時才執行 conditional query。
+- Config/Profile/client setup failure 仍輸出 redacted schema，不回傳底層 path/value。
+- 一般 build 與 deterministic release archive 都包含同 commit 的 `ecs-flux-probe`。
+
+Required external evidence:
+
+- ECS 3.6、3.7、3.8.0 exact appliance 可各執行一次 Probe；這些 report 不再是已共享
+  驗證功能的必要條件。非零 Performance/range/failure 仍是 operation/release gate。
+- Appliance operator 與 Project Maintainer 審查 exact build、TLS/role、report、官方文件
+  與 release candidate commit；不得由 exit 0 自動更新 Profile certification。
+- CE Flux 503 不撤銷從 appliance 3.8.1.1 繼承的 latest-snapshot shared evidence。
+
+2026-08-01 local result:
+
+- Four-profile replay、all-null、HTTP 503 safe partial、serialization redaction、Disk guard
+  與 CLI setup redaction 全部通過。
+- Synthetic HTTPS E2E 經 real client 完成 login、Profile selection、3 Node + 3 Performance
+  Flux queries 與 logout；結果是 deterministic path evidence，不是 appliance evidence。
+- Fresh race suite 通過；完整 required Harness 以 84.7% coverage 通過，security stage
+  成功更新官方資料並回報沒有 Go vulnerability。
+- Deterministic release build 成功，Linux archive 同時包含 Exporter 與 Probe。
+- `systemd-analyze`、`promtool`、`kubeconform` 本機 unavailable，因此 deployment stage
+  執行 strict static fallback；不宣稱 live runtime evidence。
+
+## ECS-009 ECS 3.8.1.1 Flux and TLS Compatibility Verification
+
+Deterministic cases:
+
+- Production `tls.verify: false` 可通過 strict config；runtime WARN 只含
+  cluster/environment，不含 endpoint。
+- Node CPU、Memory、Network 與 conditional Disk 使用獨立精確 query，保留
+  `cpu`、`interface`、`path`，不使用 ECS 不支援的 `union`/`map`。
+- 多個 Node/Performance 子查詢任一失敗時保留最後完整 snapshot，不接受部分更新。
+- VDC throughput 精確 fields、latency `id=ttfb_read|ttlb_write` + p50/p99、
+  transaction/error request-rate status mapping。
+- Namespace 只接受 `transaction_ns`/`error_ns` 與 `namespace` tag；不存在
+  Namespace throughput/latency metric family。
+- Regex broad query、metadata、`*_head`、`*_delta`、`*_downsampled` 與 aggregate
+  failed transaction 不得進入 public mapping。
+- HTTP 200 all-null `Series` placeholder 必須映射為空結果；非空 row 缺 Columns
+  仍須失敗。
+- Common manifest/fixture count、column datatype/range、credential scan 與本機 mock
+  route 必須通過。
+
+Required live evidence:
+
+- 在授權 ECS 3.8.1.1 執行 corrected Exporter 唯讀 rerun，確認五個 Node 的
+  CPU/Memory/Network metrics、Performance collector、readiness 與 graceful logout。
+- 不把 TLS verification disabled、管理員帳號、單一 build、零負載 performance 或
+  缺少 controlled failure/range tests 誤報為正式 Profile certification。
+
+2026-07-30 corrected appliance rerun:
+
+- Exact build `3.8.1.1.140118.8d698782e5d` 選擇 `ecs-3.8.1`；liveness/readiness
+  HTTP 200，readiness 為 `UP`。
+- 五個 CPU、五個 memory-used、五個 memory-total、十個 network-receive 與十個
+  network-transmit series 已輸出；32 個當前 metric families 通過 `metricscheck`。
+- Node/Performance split collectors 連續成功；最後零負載視窗的 VDC core 與
+  Namespace 無資料，all-null placeholder 正確映射為空結果。
+- Race、lint、format、typecheck、tests、84.6% coverage、build、CI policy 與
+  deployment checks 通過。Required security refresh 因外部 vulnerability database
+  無法解析而未完成，因此完整 Harness handoff 仍未通過。
 
 ## ECS-008 Production Release and Bare Metal Verification
 
@@ -97,8 +235,9 @@ Profile certification。
 
 ECS-006 的 deterministic cases 必須涵蓋：
 
-- VDC/Namespace throughput、latency、request/status-window Flux mapping、unit/scope、
-  duplicate/invalid response 與 Prometheus Gauge exposition。
+- ECS-006 原始 VDC/Namespace synthetic performance mapping、unit/scope 與
+  duplicate/invalid response cases；ECS-009 以 appliance-observed VDC
+  throughput/latency 與 Namespace request-rate contract 取代其 schema 假設。
 - Profile native/conditional/unavailable 與 explicit enable/deny；Recovery 同樣受 guard，
   skipped collector 不增加 cache refresh/error。
 - Node service/process known enum、disk filesystem allowlist、network interface

@@ -17,6 +17,8 @@ jobs:
     name: Validate release commit
     runs-on: ubuntu-24.04
     timeout-minutes: 30
+    outputs:
+      release_kind: ${{ steps.release_kind.outputs.kind }}
     steps:
       - name: Check out source
         uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
@@ -40,6 +42,9 @@ jobs:
           GOBIN="$RUNNER_TEMP/bin" \
             go install github.com/google/osv-scanner/v2/cmd/osv-scanner@v2.3.8
           printf '%s\n' "$RUNNER_TEMP/bin" >>"$GITHUB_PATH"
+      - name: Classify release tag
+        id: release_kind
+        run: printf 'kind=%s\n' "$(./scripts/release-kind.sh "$GITHUB_REF_NAME")" >>"$GITHUB_OUTPUT"
       - name: Verify release tag and policy
         run: |
           ./scripts/release-policy-check.sh
@@ -49,6 +54,7 @@ jobs:
           ./HARNESS/harness.sh selftest
           ./HARNESS/harness.sh verify
           bash -lc 'source scripts/go-env.sh; go test -race -count=1 -timeout=3m ./...'
+          ./scripts/container-check.sh
           ./scripts/deployment-release-check.sh
           ./scripts/performance-check.sh
       - name: Scan source dependencies
@@ -69,6 +75,7 @@ jobs:
   ecs-certification:
     name: Certify exact production ECS build
     needs: validate
+    if: needs.validate.outputs.release_kind == 'stable'
     runs-on:
       - self-hosted
       - linux
@@ -104,6 +111,7 @@ jobs:
   ecs-ce-compatibility:
     name: Validate exact ECS CE test build
     needs: validate
+    if: needs.validate.outputs.release_kind == 'stable'
     runs-on:
       - self-hosted
       - linux
@@ -140,6 +148,7 @@ jobs:
   deployed-e2e:
     name: Certify deployed release candidate
     needs: validate
+    if: needs.validate.outputs.release_kind == 'stable'
     runs-on:
       - self-hosted
       - linux
@@ -176,6 +185,7 @@ jobs:
   deployed-performance:
     name: Certify deployed target scale
     needs: validate
+    if: needs.validate.outputs.release_kind == 'stable'
     runs-on:
       - self-hosted
       - linux
@@ -212,6 +222,18 @@ jobs:
       - ecs-ce-compatibility
       - deployed-e2e
       - deployed-performance
+    if: >-
+      always() &&
+      needs.validate.result == 'success' &&
+      (
+        needs.validate.outputs.release_kind == 'prerelease' ||
+        (
+          needs.ecs-certification.result == 'success' &&
+          needs.ecs-ce-compatibility.result == 'success' &&
+          needs.deployed-e2e.result == 'success' &&
+          needs.deployed-performance.result == 'success'
+        )
+      )
     runs-on: ubuntu-24.04
     timeout-minutes: 45
     environment: release
@@ -379,6 +401,15 @@ jobs:
           upload-artifact: false
           upload-release-assets: false
           syft-version: v1.44.0
+      - name: Record private RC attestation boundary
+        if: needs.validate.outputs.release_kind == 'prerelease' && github.event.repository.private
+        run: |
+          cat >dist/release/github-attestation-boundary.txt <<'EOF'
+          GitHub-native artifact attestations require a public repository or GitHub Enterprise Cloud.
+          This private-repository release candidate instead includes signed checksums, source and
+          platform SBOMs, BuildKit OCI provenance/SBOM attestations, and a keylessly signed OCI index.
+          Stable releases still require the GitHub-native attestation steps to succeed.
+          EOF
       - name: Finalize checksums and image digest
         run: |
           printf '%s@%s\n' "$RELEASE_IMAGE" "$RELEASE_DIGEST" >dist/release/image-digest.txt
@@ -392,12 +423,14 @@ jobs:
           RELEASE_IMAGE: ${{ steps.release.outputs.image }}
           RELEASE_DIGEST: ${{ steps.push.outputs.digest }}
       - name: Attest image provenance
+        if: needs.validate.outputs.release_kind == 'stable' || github.event.repository.private == false
         uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
         with:
           subject-name: ${{ steps.release.outputs.image }}
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
       - name: Attest amd64 image SBOM
+        if: needs.validate.outputs.release_kind == 'stable' || github.event.repository.private == false
         uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
         with:
           subject-name: ${{ steps.release.outputs.image }}
@@ -405,6 +438,7 @@ jobs:
           sbom-path: dist/release/image-linux-amd64.spdx.json
           push-to-registry: true
       - name: Attest arm64 image SBOM
+        if: needs.validate.outputs.release_kind == 'stable' || github.event.repository.private == false
         uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
         with:
           subject-name: ${{ steps.release.outputs.image }}
@@ -412,6 +446,7 @@ jobs:
           sbom-path: dist/release/image-linux-arm64.spdx.json
           push-to-registry: true
       - name: Attest release files
+        if: needs.validate.outputs.release_kind == 'stable' || github.event.repository.private == false
         uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
         with:
           subject-path: |
@@ -419,6 +454,7 @@ jobs:
             dist/release/*.tgz
             dist/release/SHA256SUMS
       - name: Attest release SBOM
+        if: needs.validate.outputs.release_kind == 'stable' || github.event.repository.private == false
         uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
         with:
           subject-path: |
@@ -459,6 +495,7 @@ jobs:
           HELM_REFERENCE: ${{ steps.helm-push.outputs.reference }}
           HELM_DIGEST: ${{ steps.helm-push.outputs.digest }}
       - name: Attest Helm OCI chart
+        if: needs.validate.outputs.release_kind == 'stable' || github.event.repository.private == false
         uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
         with:
           subject-name: ${{ steps.helm-push.outputs.reference }}
@@ -466,9 +503,19 @@ jobs:
           push-to-registry: true
       - name: Publish GitHub release
         run: |
+          release_flags=()
+          if [[ "$(./scripts/release-kind.sh "$GITHUB_REF_NAME")" == "prerelease" ]]; then
+            release_flags+=(--prerelease)
+          fi
+          notes_flags=(--generate-notes)
+          notes_file="docs/releases/$GITHUB_REF_NAME.md"
+          if [[ -f "$notes_file" ]]; then
+            notes_flags=(--notes-file "$notes_file")
+          fi
           gh release create "$GITHUB_REF_NAME" \
             --verify-tag \
-            --generate-notes \
+            "${release_flags[@]}" \
+            "${notes_flags[@]}" \
             --title "Dell ECS Metrics Exporter $GITHUB_REF_NAME" \
             dist/release/*
         env:

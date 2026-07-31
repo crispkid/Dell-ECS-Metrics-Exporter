@@ -140,6 +140,9 @@ func cloneProfile(source *Profile) *Profile {
 	result.Capabilities = cloneCapabilities(source.Capabilities)
 	result.KnownIssues = slices.Clone(source.KnownIssues)
 	result.Evidence.OfficialSources = slices.Clone(source.Evidence.OfficialSources)
+	result.Evidence.SharedValidatedCapabilities = slices.Clone(
+		source.Evidence.SharedValidatedCapabilities,
+	)
 	return &result
 }
 

@@ -89,11 +89,6 @@ ecs:
 			want: "duplicated",
 		},
 		{
-			name:    "production insecure",
-			content: validClusterYAML("prod", "production", "false"),
-			want:    "cannot disable TLS",
-		},
-		{
 			name:    "bad duration",
 			content: "cache:\n  staleTolerance: never\n",
 			want:    "time: invalid duration",
@@ -138,6 +133,24 @@ ecs:
 				t.Fatalf("Load error = %v, want containing %q", err, test.want)
 			}
 		})
+	}
+}
+
+func TestProductionClusterMayExplicitlyDisableTLSVerification(t *testing.T) {
+	t.Parallel()
+	path := filepath.Join(t.TempDir(), "config.yaml")
+	if err := os.WriteFile(
+		path, []byte("security:\n  inventoryApi:\n    enabled: false\n"+
+			validClusterYAML("prod", "production", "false")), 0o600,
+	); err != nil {
+		t.Fatal(err)
+	}
+	settings, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if settings.ECS.Clusters[0].TLS.VerificationEnabled() {
+		t.Fatal("explicit production tls.verify=false was not preserved")
 	}
 }
 

@@ -591,8 +591,9 @@ func newTransport(
 ) (*http.Transport, error) {
 	tlsConfig := &tls.Config{
 		MinVersion: tls.VersionTLS12,
-		// This value can only be false by default or explicitly enabled for a
-		// non-production cluster after config validation.
+		// Verification is enabled by default. Operators may explicitly disable
+		// it for ECS deployments whose self-signed certificate cannot be
+		// represented by caFile; startup emits a warning for that choice.
 		InsecureSkipVerify: !settings.VerificationEnabled(), // #nosec G402
 	}
 	if settings.CAFile != "" {

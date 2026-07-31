@@ -1,6 +1,6 @@
 # GitHub Actions Security and Delivery Contract
 
-Active Change: ECS-008
+Active Change: ECS-012
 
 本文件定義 `.github/workflows/` 的最低安全與交付要求。`ci.yml` 已實作未信任 PR
 可執行的唯讀 verification workflow；真實 ECS integration 與 release/publish
@@ -51,6 +51,11 @@ workflow 使用受保護 environment 與 fail-closed exact-build job。
    選定政策簽章與驗證。
 8. 受保護且為 production release prerequisite 的 exact-build ECS integration；
    可獨立執行的 deployed E2E 與 target-scale gate。
+
+Source/release build 必須同時產生同 commit metadata 的 `ecs-exporter` 與
+`ecs-flux-probe`。若受保護 job 保存 Probe report，只能上傳符合
+`live-read-only-redacted` schema 的檔案；exit code 0 或 artifact 存在都不能自動提升
+Profile certification。
 
 `HARNESS_CI_POLICY_COMMAND` 與 `HARNESS_SUPPLY_CHAIN_COMMAND` 必須指向實際、可重現
 的工具或 project-owned script；在工具未選定前不得把這兩個 stage 宣告為通過。

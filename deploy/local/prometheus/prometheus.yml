@@ -1,0 +1,23 @@
+global:
+  scrape_interval: 15s
+  scrape_timeout: 10s
+  evaluation_interval: 15s
+  external_labels:
+    environment: local-docker
+
+rule_files:
+  - /etc/prometheus/rules/dell-ecs-metrics-exporter.yaml
+
+scrape_configs:
+  - job_name: prometheus
+    static_configs:
+      - targets:
+          - localhost:9090
+
+  # Docker Desktop and the Compose host-gateway mapping resolve this name to
+  # the host. The Exporter must listen on, or publish, host port 8080.
+  - job_name: dell-ecs-metrics-exporter
+    metrics_path: /metrics
+    static_configs:
+      - targets:
+          - host.docker.internal:8080
