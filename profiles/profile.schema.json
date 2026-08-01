@@ -1,0 +1,243 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://example.invalid/dell-ecs-metrics-exporter/profile.schema.json",
+  "title": "Dell ECS compatibility profile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "profile_id",
+    "version",
+    "selection",
+    "transport",
+    "capabilities",
+    "known_issues",
+    "evidence"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "1.0"
+    },
+    "profile_id": {
+      "type": "string",
+      "pattern": "^ecs-3\\.(6|7|8\\.0|8\\.1)$"
+    },
+    "version": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "min_inclusive",
+        "max_exclusive",
+        "parser",
+        "documented_releases",
+        "tested_builds"
+      ],
+      "properties": {
+        "min_inclusive": {
+          "$ref": "#/$defs/version"
+        },
+        "max_exclusive": {
+          "$ref": "#/$defs/version"
+        },
+        "parser": {
+          "const": "dell-four-part-with-optional-build-suffix"
+        },
+        "documented_releases": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        },
+        "tested_builds": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "uniqueItems": true
+        }
+      }
+    },
+    "selection": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "logical_api",
+        "method",
+        "path",
+        "version_field",
+        "mixed_version_policy",
+        "unknown_version_policy"
+      ],
+      "properties": {
+        "logical_api": {
+          "const": "version-discovery"
+        },
+        "method": {
+          "const": "GET"
+        },
+        "path": {
+          "const": "/vdc/nodes"
+        },
+        "version_field": {
+          "const": "node[].version"
+        },
+        "mixed_version_policy": {
+          "const": "intersection-only-no-interval-derived-rates"
+        },
+        "unknown_version_policy": {
+          "const": "reject"
+        }
+      }
+    },
+    "transport": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "scheme",
+        "management_port",
+        "login_path",
+        "token_header",
+        "whoami_path",
+        "logout_path",
+        "flux_query_path",
+        "host_header_policy"
+      ],
+      "properties": {
+        "scheme": {
+          "const": "https"
+        },
+        "management_port": {
+          "const": 4443
+        },
+        "login_path": {
+          "const": "/login"
+        },
+        "token_header": {
+          "const": "X-SDS-AUTH-TOKEN"
+        },
+        "whoami_path": {
+          "const": "/user/whoami"
+        },
+        "logout_path": {
+          "const": "/logout"
+        },
+        "flux_query_path": {
+          "const": "/flux/api/external/v2/query"
+        },
+        "host_header_policy": {
+          "enum": [
+            "legacy",
+            "accepted-server-names-required-for-proxy",
+            "conditional-or-persisted"
+          ]
+        }
+      }
+    },
+    "capabilities": {
+      "type": "object",
+      "minProperties": 1,
+      "additionalProperties": {
+        "$ref": "#/$defs/support"
+      }
+    },
+    "known_issues": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "effect",
+          "mitigation"
+        ],
+        "properties": {
+          "id": {
+            "type": "string",
+            "minLength": 1
+          },
+          "effect": {
+            "type": "string",
+            "minLength": 1
+          },
+          "mitigation": {
+            "type": "string",
+            "minLength": 1
+          }
+        }
+      }
+    },
+    "evidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "status",
+        "official_sources",
+        "api_reference_access",
+        "fixture_classification",
+        "feature_validation_policy",
+        "shared_validated_capabilities",
+        "sandbox_certified"
+      ],
+      "properties": {
+        "status": {
+          "enum": [
+            "documentation-verified",
+            "documentation-partial",
+            "sandbox-verified"
+          ]
+        },
+        "official_sources": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "format": "uri"
+          },
+          "uniqueItems": true
+        },
+        "api_reference_access": {
+          "enum": [
+            "downloaded-and-reviewed",
+            "listed-by-dell-login-required"
+          ]
+        },
+        "fixture_classification": {
+          "enum": [
+            "synthetic-document-derived",
+            "redacted-sandbox-derived"
+          ]
+        },
+        "feature_validation_policy": {
+          "const": "shared-live-any-target-version"
+        },
+        "shared_validated_capabilities": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
+          "uniqueItems": true
+        },
+        "sandbox_certified": {
+          "type": "boolean"
+        }
+      }
+    }
+  },
+  "$defs": {
+    "version": {
+      "type": "string",
+      "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+\\.[0-9]+$"
+    },
+    "support": {
+      "enum": [
+        "native",
+        "derived",
+        "conditional",
+        "unavailable"
+      ]
+    }
+  }
+}

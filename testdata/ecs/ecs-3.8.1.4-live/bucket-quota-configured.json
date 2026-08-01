@@ -1,0 +1,8 @@
+{
+  "bucketname": "redacted-bucket-quota",
+  "namespace": "redacted-namespace",
+  "blockSize": 2,
+  "notificationSize": 1,
+  "blockSizeInCount": -1,
+  "notificationSizeInCount": -1
+}

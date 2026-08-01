@@ -1,0 +1,15 @@
+{
+  "namespace": "redacted-namespace",
+  "sample_time": "2026-07-26T10:00:00Z",
+  "total_size": "10240",
+  "total_size_unit": "KB",
+  "total_objects": 4,
+  "bucket_billing_info": [],
+  "next_marker": "",
+  "uptodate_till": "2026-07-26T10:00:00Z",
+  "total_mpu_size": "0",
+  "total_mpu_parts": 0,
+  "valid_namespace": "redacted-namespace",
+  "total_objects_deleted": "0",
+  "total_size_deleted": "0"
+}

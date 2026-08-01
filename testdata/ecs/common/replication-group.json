@@ -1,0 +1,15 @@
+{
+  "_links": {
+    "self": {
+      "href": "/dashboard/replicationgroups/rg-a"
+    }
+  },
+  "apiChange": "1",
+  "id": "rg-a",
+  "name": "replication-group-a",
+  "numZones": "2",
+  "chunksRepoPendingReplicationTotalSize": 1048576,
+  "chunksJournalPendingReplicationTotalSize": "524288",
+  "chunksPendingXorTotalSize": 0,
+  "replicationRpoTimestamp": "1768478100"
+}

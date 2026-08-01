@@ -1,0 +1,4 @@
+# Type Path                                         Mode User Group        Age Argument
+d /etc/dell-ecs-metrics-exporter                    0750 root ecs-exporter -   -
+d /etc/dell-ecs-metrics-exporter/secrets            0750 root ecs-exporter -   -
+d /usr/share/dell-ecs-metrics-exporter               0755 root root         -   -

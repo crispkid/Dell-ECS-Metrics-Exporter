@@ -1,0 +1,34 @@
+{
+  "schema_version": "1.0",
+  "profile_id": "ecs-3.7",
+  "inherits": "../common/manifest.json",
+  "classification": "synthetic-document-derived",
+  "sandbox_evidence": false,
+  "profile_expectations": {
+    "selected_for_version": "3.7.0.7",
+    "flux_interval_rates_enabled_after_sandbox": false,
+    "host_header_policy": "legacy"
+  },
+  "fixtures": [
+    {
+      "file": "nodes.json",
+      "mapping_id": "MAP-VERSION-001",
+      "scenario": "uniform ECS 3.7 node versions",
+      "evidence": "synthetic-document-derived",
+      "expected": {
+        "profile_id": "ecs-3.7",
+        "mixed_version": false
+      }
+    },
+    {
+      "file": "flux-range-out-of-window.json",
+      "mapping_id": "MAP-VDC-PERFORMANCE-001",
+      "scenario": "known Flux range defect guard",
+      "evidence": "synthetic-document-derived",
+      "expected": {
+        "rows_accepted_for_rate": 0,
+        "interval_rate_disabled": true
+      }
+    }
+  ]
+}

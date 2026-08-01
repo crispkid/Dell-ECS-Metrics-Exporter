@@ -1,0 +1,44 @@
+{
+  "Series": [
+    {
+      "Datatypes": [
+        "long",
+        "dateTime:RFC3339",
+        "dateTime:RFC3339",
+        "dateTime:RFC3339",
+        "double",
+        "string",
+        "string"
+      ],
+      "Columns": [
+        "table",
+        "_start",
+        "_stop",
+        "_time",
+        "_value",
+        "_field",
+        "_measurement"
+      ],
+      "Values": [
+        [
+          "0",
+          "2026-01-15T11:50:00Z",
+          "2026-01-15T12:00:00Z",
+          "2026-01-15T11:55:00Z",
+          "120.5",
+          "succeed_request_counter",
+          "cq_performance_transaction"
+        ],
+        [
+          "0",
+          "2026-01-15T11:50:00Z",
+          "2026-01-15T12:00:00Z",
+          "2026-01-15T11:59:30Z",
+          "121.25",
+          "succeed_request_counter",
+          "cq_performance_transaction"
+        ]
+      ]
+    }
+  ]
+}

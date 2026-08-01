@@ -1,0 +1,131 @@
+{
+  "Series": [
+    {
+      "Datatypes": [
+        "long",
+        "dateTime:RFC3339",
+        "dateTime:RFC3339",
+        "dateTime:RFC3339",
+        "double",
+        "string",
+        "string",
+        "string",
+        "string",
+        "string",
+        "string"
+      ],
+      "Columns": [
+        "table",
+        "_start",
+        "_stop",
+        "_time",
+        "_value",
+        "_field",
+        "_measurement",
+        "cpu",
+        "host",
+        "node_id",
+        "tag"
+      ],
+      "Values": [
+        [
+          "0",
+          "2026-01-15T11:50:00Z",
+          "2026-01-15T12:00:00Z",
+          "2026-01-15T11:59:00Z",
+          "72.5",
+          "usage_idle",
+          "cpu",
+          "cpu-total",
+          "node-a.example.invalid",
+          "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "dashboard"
+        ]
+      ]
+    },
+    {
+      "Datatypes": [
+        "string",
+        "long",
+        "string",
+        "string",
+        "dateTime:RFC3339",
+        "long",
+        "string"
+      ],
+      "Columns": [
+        "_measurement",
+        "_value",
+        "_field",
+        "host",
+        "_time",
+        "table",
+        "node_id"
+      ],
+      "Values": [
+        [
+          "mem",
+          "8589934592",
+          "used",
+          "node-a.example.invalid",
+          "2026-01-15T11:59:00Z",
+          "1",
+          "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        ],
+        [
+          "mem",
+          "17179869184",
+          "total",
+          "node-a.example.invalid",
+          "2026-01-15T11:59:00Z",
+          "1",
+          "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        ]
+      ]
+    },
+    {
+      "Datatypes": [
+        "long",
+        "dateTime:RFC3339",
+        "long",
+        "string",
+        "string",
+        "string",
+        "string",
+        "string"
+      ],
+      "Columns": [
+        "table",
+        "_time",
+        "_value",
+        "_field",
+        "_measurement",
+        "host",
+        "interface",
+        "node_id"
+      ],
+      "Values": [
+        [
+          "2",
+          "2026-01-15T11:59:00Z",
+          "123456789",
+          "bytes_recv",
+          "net",
+          "node-a.example.invalid",
+          "public",
+          "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        ],
+        [
+          "2",
+          "2026-01-15T11:59:00Z",
+          "98765432",
+          "bytes_sent",
+          "net",
+          "node-a.example.invalid",
+          "public",
+          "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+        ]
+      ]
+    }
+  ]
+}

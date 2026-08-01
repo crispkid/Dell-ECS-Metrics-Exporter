@@ -1,0 +1,47 @@
+name: ECS certification
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ecs-certification
+  cancel-in-progress: false
+
+jobs:
+  certify:
+    name: Read-only ECS certification
+    runs-on:
+      - self-hosted
+      - linux
+      - ecs-certification
+    timeout-minutes: 45
+    environment: ecs-certification
+    steps:
+      - name: Check out source
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+      - name: Install Go toolchain
+        uses: actions/setup-go@4a3601121dd01d1626a1e23e37211e3254c1c06c # v6.4.0
+        with:
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+      - name: Run protected read-only certification
+        run: ./scripts/live-certification.sh
+        env:
+          ECS_CERT_CONFIG: ${{ secrets.ECS_CERT_CONFIG_PATH }}
+          ECS_CERT_INVENTORY_TOKEN_FILE: ${{ secrets.ECS_CERT_INVENTORY_TOKEN_PATH }}
+          ECS_CERT_EXPECTED_VERSION: ${{ vars.ECS_CERT_EXPECTED_VERSION }}
+          ECS_CERT_BASE_URL: ${{ vars.ECS_CERT_BASE_URL }}
+          ECS_CERT_ALLOW_DEGRADED: ${{ vars.ECS_CERT_ALLOW_DEGRADED }}
+      - name: Upload redacted evidence
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: ecs-certification-evidence
+          path: test-results/certification/
+          if-no-files-found: error
+          retention-days: 90
+          include-hidden-files: false

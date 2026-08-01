@@ -1,0 +1,117 @@
+{
+  "schema_version": "1.0",
+  "profile_id": "ecs-3.8.1",
+  "version": {
+    "min_inclusive": "3.8.1.0",
+    "max_exclusive": "3.8.2.0",
+    "parser": "dell-four-part-with-optional-build-suffix",
+    "documented_releases": [
+      "3.8.1.0",
+      "3.8.1.1",
+      "3.8.1.2",
+      "3.8.1.3",
+      "3.8.1.4",
+      "3.8.1.5",
+      "3.8.1.6",
+      "3.8.1.7"
+    ],
+    "tested_builds": []
+  },
+  "selection": {
+    "logical_api": "version-discovery",
+    "method": "GET",
+    "path": "/vdc/nodes",
+    "version_field": "node[].version",
+    "mixed_version_policy": "intersection-only-no-interval-derived-rates",
+    "unknown_version_policy": "reject"
+  },
+  "transport": {
+    "scheme": "https",
+    "management_port": 4443,
+    "login_path": "/login",
+    "token_header": "X-SDS-AUTH-TOKEN",
+    "whoami_path": "/user/whoami",
+    "logout_path": "/logout",
+    "flux_query_path": "/flux/api/external/v2/query",
+    "host_header_policy": "conditional-or-persisted"
+  },
+  "capabilities": {
+    "authentication": "native",
+    "version_discovery": "native",
+    "cluster_health": "derived",
+    "cluster_capacity": "native",
+    "node_inventory": "native",
+    "node_health": "native",
+    "node_service_process": "conditional",
+    "node_cpu_memory": "native",
+    "node_disk_capacity": "conditional",
+    "node_network_counters": "native",
+    "namespace_inventory": "native",
+    "namespace_capacity": "native",
+    "namespace_quota": "native",
+    "namespace_performance": "conditional",
+    "bucket_inventory": "native",
+    "bucket_capacity": "native",
+    "bucket_quota": "native",
+    "bucket_performance": "unavailable",
+    "vdc_performance": "conditional",
+    "flux_latest_snapshot": "native",
+    "flux_interval_rates": "conditional",
+    "replication_status": "native",
+    "replication_lag": "derived",
+    "recovery_progress": "conditional"
+  },
+  "known_issues": [
+    {
+      "id": "DELL-KB-000211906-FIXED",
+      "effect": "Dell states the Flux time-range defect affecting ECS 3.7 and 3.8.0 is addressed in ECS 3.8.1.",
+      "mitigation": "Retain range-boundary contract tests and enable interval-derived rates only after a live build passes them."
+    },
+    {
+      "id": "DELL-KB-000205031-PERSISTED",
+      "effect": "Accepted server names configured before upgrade can remain active on ECS 3.8.1.",
+      "mitigation": "Keep hostname, TLS SNI and Host consistent even though fresh 3.8.1 deployments may accept all hosts by default."
+    },
+    {
+      "id": "ECS381-REST-REFERENCE-PENDING",
+      "effect": "The official REST API ZIP is listed by Dell but requires an authenticated support session and has not been reviewed in this repository.",
+      "mitigation": "Treat management mappings inherited from 3.6 as candidates and block sandbox certification until the 3.8.1 ZIP and live responses are compared."
+    },
+    {
+      "id": "ECSCE3814-FLUX-503-OBSERVED",
+      "effect": "The isolated ECS CE 3.8.1.4 build returned HTTP 503 for the Flux external query endpoint while Management-backed collectors succeeded.",
+      "mitigation": "Preserve Management inventory and report DEGRADED for node-resources; do not infer production appliance Flux support from the CE result."
+    }
+  ],
+  "evidence": {
+    "status": "documentation-partial",
+    "official_sources": [
+      "https://www.dell.com/support/kbdoc/en-us/000205234/ecs-3-8-product-documentation-index-info-hub",
+      "https://www.dell.com/support/kbdoc/en-us/000211906/ecs-different-values-from-flux-api-since-upgrading-to-3-7-3-8",
+      "https://www.dell.com/support/kbdoc/en-us/000205031/ecs-how-to-perform-host-header-injection-for-3-8-x"
+    ],
+    "api_reference_access": "listed-by-dell-login-required",
+    "fixture_classification": "synthetic-document-derived",
+    "feature_validation_policy": "shared-live-any-target-version",
+    "shared_validated_capabilities": [
+      "authentication",
+      "version_discovery",
+      "cluster_health",
+      "cluster_capacity",
+      "node_inventory",
+      "node_health",
+      "node_cpu_memory",
+      "node_network_counters",
+      "namespace_inventory",
+      "namespace_capacity",
+      "namespace_quota",
+      "namespace_performance",
+      "bucket_inventory",
+      "bucket_capacity",
+      "bucket_quota",
+      "vdc_performance",
+      "flux_latest_snapshot"
+    ],
+    "sandbox_certified": false
+  }
+}

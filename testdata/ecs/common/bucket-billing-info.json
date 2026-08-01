@@ -1,0 +1,17 @@
+{
+  "bucket_billing_info": {
+    "namespace": "namespace-a",
+    "name": "bucket-a",
+    "vpool_id": "urn:storageos:ReplicationGroupInfo:11111111-1111-4111-8111-111111111111:global",
+    "total_size": "2048.0",
+    "total_size_unit": "KB",
+    "total_objects": "8",
+    "sample_time": "2026-01-15T12:00:00Z",
+    "total_mpu_size": "0.0",
+    "total_mpu_parts": 0,
+    "TagSet": [],
+    "uptodate_till": "2026-01-15T12:00:00Z",
+    "total_objects_deleted": "0",
+    "total_size_deleted": "0.0"
+  }
+}

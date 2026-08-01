@@ -1,0 +1,5 @@
+[[PackageOverrides]]
+name = "stdlib"
+ecosystem = "Go"
+license.override = ["BSD-3-Clause"]
+reason = "Go's synthetic stdlib package is covered by the Go BSD 3-Clause license; deps.dev may not return license metadata for it. Vulnerability scanning remains enabled."

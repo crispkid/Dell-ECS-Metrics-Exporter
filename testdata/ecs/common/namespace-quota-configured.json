@@ -1,0 +1,7 @@
+{
+  "namespace_quota_details": {
+    "namespace": "namespace-a",
+    "blockSize": "1000",
+    "notificationSize": 800
+  }
+}

@@ -1,0 +1,22 @@
+{
+  "node": [
+    {
+      "rackId": "rack-a",
+      "version": "3.7.0.7.123456.synthetic",
+      "isLocal": true,
+      "status": "unlocked",
+      "ip": "192.0.2.11",
+      "nodename": "node-a.example.invalid",
+      "nodeid": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+    },
+    {
+      "rackId": "rack-a",
+      "version": "3.7.0.7.123456.synthetic",
+      "isLocal": true,
+      "status": "unlocked",
+      "ip": "192.0.2.12",
+      "nodename": "node-b.example.invalid",
+      "nodeid": "bbbbbbbb-bbbb-4bbb-8bbb-bbbbbbbbbbbb"
+    }
+  ]
+}

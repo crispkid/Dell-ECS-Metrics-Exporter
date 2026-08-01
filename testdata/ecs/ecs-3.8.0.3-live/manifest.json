@@ -1,0 +1,58 @@
+{
+  "schema_version": "1.0",
+  "profile_id": "ecs-3.8.0.3-partial-live",
+  "classification": "redacted-sandbox-derived",
+  "sandbox_evidence": true,
+  "profile_expectations": {
+    "exact_build": "3.8.0.3.138685.3a0a9b6bf3a",
+    "profile_id": "ecs-3.8.0",
+    "profile_certified": false
+  },
+  "fixtures": [
+    {
+      "file": "bucket-quota.json",
+      "mapping_id": "MAP-BUCKET-QUOTA-001",
+      "scenario": "redacted ECS CE 3.8.0.3 top-level configured quota response",
+      "evidence": "redacted-sandbox-derived",
+      "expected": {
+        "hard_quota_gb": 2,
+        "soft_quota_gb": 1
+      }
+    },
+    {
+      "file": "bucket-billing-info.json",
+      "mapping_id": "MAP-BUCKET-BILLING-001",
+      "scenario": "redacted ECS CE 3.8.0.3 top-level bucket usage with binary KB units",
+      "evidence": "redacted-sandbox-derived",
+      "expected": {
+        "total_size_kb": 6835.9375,
+        "used_bytes": 7000000,
+        "total_objects": 3
+      }
+    },
+    {
+      "file": "bucket-billing-batch.json",
+      "mapping_id": "MAP-BUCKET-BILLING-001",
+      "scenario": "redacted ECS CE 3.8.0.3 non-empty BucketListParam response with plural envelope",
+      "evidence": "redacted-sandbox-derived",
+      "expected": {
+        "request_field": "id",
+        "response_envelope": "bucket_billing_infos",
+        "bucket_count": 3,
+        "used_bytes_total": 10000000,
+        "total_objects": 4
+      }
+    },
+    {
+      "file": "namespace-billing-info.json",
+      "mapping_id": "MAP-NAMESPACE-BILLING-001",
+      "scenario": "redacted ECS CE 3.8.0.3 namespace usage with binary KB units",
+      "evidence": "redacted-sandbox-derived",
+      "expected": {
+        "total_size_kb": 9765.625,
+        "used_bytes": 10000000,
+        "total_objects": 4
+      }
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "node": [
+    {
+      "rackId": "rack-a",
+      "version": "3.8.2.0.123456.synthetic",
+      "isLocal": true,
+      "status": "unlocked",
+      "ip": "192.0.2.11",
+      "nodename": "node-a.example.invalid",
+      "nodeid": "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa"
+    }
+  ]
+}

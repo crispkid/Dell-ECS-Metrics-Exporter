@@ -1,0 +1,38 @@
+{
+  "Series": [
+    {
+      "Datatypes": [
+        "long",
+        "dateTime:RFC3339",
+        "dateTime:RFC3339",
+        "dateTime:RFC3339",
+        "long",
+        "string",
+        "string",
+        "string"
+      ],
+      "Columns": [
+        "table",
+        "_start",
+        "_stop",
+        "_time",
+        "_value",
+        "_field",
+        "_measurement",
+        "host"
+      ],
+      "Values": [
+        [
+          "0",
+          "2026-01-15T11:40:00Z",
+          "2026-01-15T12:00:00Z",
+          "2026-01-15T10:00:00Z",
+          "372655743923",
+          "packets_sent",
+          "net",
+          "node-a.example.invalid"
+        ]
+      ]
+    }
+  ]
+}

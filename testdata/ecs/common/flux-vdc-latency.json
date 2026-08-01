@@ -1,0 +1,57 @@
+{
+  "Series": [
+    {
+      "Datatypes": [
+        "dateTime:RFC3339", "dateTime:RFC3339", "dateTime:RFC3339",
+        "double", "string", "string", "string"
+      ],
+      "Columns": [
+        "_start",
+        "_stop",
+        "_time",
+        "_value",
+        "_field",
+        "_measurement",
+        "id"
+      ],
+      "Values": [
+        [
+          "2026-01-15T11:50:00Z",
+          "2026-01-15T12:00:00Z",
+          "2026-01-15T11:59:00Z",
+          "12.5",
+          "p50",
+          "cq_performance_latency",
+          "ttfb_read"
+        ],
+        [
+          "2026-01-15T11:50:00Z",
+          "2026-01-15T12:00:00Z",
+          "2026-01-15T11:59:00Z",
+          "25",
+          "p99",
+          "cq_performance_latency",
+          "ttfb_read"
+        ],
+        [
+          "2026-01-15T11:50:00Z",
+          "2026-01-15T12:00:00Z",
+          "2026-01-15T11:59:00Z",
+          "7",
+          "p50",
+          "cq_performance_latency",
+          "ttlb_write"
+        ],
+        [
+          "2026-01-15T11:50:00Z",
+          "2026-01-15T12:00:00Z",
+          "2026-01-15T11:59:00Z",
+          "18",
+          "p99",
+          "cq_performance_latency",
+          "ttlb_write"
+        ]
+      ]
+    }
+  ]
+}

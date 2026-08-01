@@ -1,0 +1,7 @@
+apiVersion: v2
+name: dell-ecs-metrics-exporter
+description: Prometheus metrics exporter and read-only inventory API for Dell ECS
+type: application
+version: 0.2.0
+appVersion: "0.2.0-dev"
+kubeVersion: ">=1.25.0-0"

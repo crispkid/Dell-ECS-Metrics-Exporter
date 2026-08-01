@@ -1,0 +1,13 @@
+{{- if .Values.podDisruptionBudget.enabled }}
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: {{ include "dell-ecs-metrics-exporter.fullname" . }}
+  labels:
+    {{- include "dell-ecs-metrics-exporter.labels" . | nindent 4 }}
+spec:
+  maxUnavailable: {{ .Values.podDisruptionBudget.maxUnavailable }}
+  selector:
+    matchLabels:
+      {{- include "dell-ecs-metrics-exporter.selectorLabels" . | nindent 6 }}
+{{- end }}

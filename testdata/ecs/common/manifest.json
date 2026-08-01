@@ -1,0 +1,248 @@
+{
+  "schema_version": "1.0",
+  "profile_id": "common-management-candidate",
+  "classification": "synthetic-document-derived",
+  "sandbox_evidence": false,
+  "fixtures": [
+    {
+      "file": "capacity.json",
+      "mapping_id": "MAP-CLUSTER-CAPACITY-001",
+      "scenario": "success with numeric strings",
+      "evidence": "synthetic-document-derived",
+      "expected": {
+        "total_gb": 750,
+        "free_gb": 200,
+        "used_gb": 550
+      }
+    },
+    {
+      "file": "localzone-health.json",
+      "mapping_id": "MAP-CLUSTER-HEALTH-001",
+      "scenario": "healthy VDC",
+      "evidence": "synthetic-document-derived",
+      "expected": {
+        "cluster_health": 1
+      }
+    },
+    {
+      "file": "namespaces.json",
+      "mapping_id": "MAP-NAMESPACE-INFO-001",
+      "scenario": "active namespace",
+      "evidence": "synthetic-document-derived",
+      "expected": {
+        "count": 1
+      }
+    },
+    {
+      "file": "namespace-quota-unset.json",
+      "mapping_id": "MAP-NAMESPACE-QUOTA-001",
+      "scenario": "quota unset sentinel",
+      "evidence": "synthetic-document-derived",
+      "expected": {
+        "hard_quota_configured": false,
+        "soft_quota_configured": false
+      }
+    },
+    {
+      "file": "namespace-quota-configured.json",
+      "mapping_id": "MAP-NAMESPACE-QUOTA-001",
+      "scenario": "hard and soft quota configured",
+      "evidence": "synthetic-document-derived",
+      "expected": {
+        "hard_quota_gb": 1000,
+        "soft_quota_gb": 800
+      }
+    },
+    {
+      "file": "buckets.json",
+      "mapping_id": "MAP-BUCKET-INFO-001",
+      "scenario": "two S3 buckets",
+      "evidence": "synthetic-document-derived",
+      "expected": {
+        "count": 2
+      }
+    },
+    {
+      "file": "bucket-quota-unset.json",
+      "mapping_id": "MAP-BUCKET-QUOTA-001",
+      "scenario": "quota unset sentinel as string",
+      "evidence": "synthetic-document-derived",
+      "expected": {
+        "hard_quota_configured": false,
+        "soft_quota_configured": false
+      }
+    },
+    {
+      "file": "bucket-quota-configured.json",
+      "mapping_id": "MAP-BUCKET-QUOTA-001",
+      "scenario": "mixed numeric types",
+      "evidence": "synthetic-document-derived",
+      "expected": {
+        "hard_quota_gb": 500,
+        "soft_quota_gb": 400
+      }
+    },
+    {
+      "file": "namespace-billing-info.json",
+      "mapping_id": "MAP-NAMESPACE-BILLING-001",
+      "scenario": "sampled namespace usage",
+      "evidence": "synthetic-document-derived",
+      "expected": {
+        "total_size_kb": 3072,
+        "total_objects": 12
+      }
+    },
+    {
+      "file": "bucket-billing-info.json",
+      "mapping_id": "MAP-BUCKET-BILLING-001",
+      "scenario": "sampled bucket usage",
+      "evidence": "synthetic-document-derived",
+      "expected": {
+        "total_size_kb": 2048,
+        "total_objects": 8
+      }
+    },
+    {
+      "file": "bucket-billing-batch.json",
+      "mapping_id": "MAP-BUCKET-BILLING-001",
+      "scenario": "namespace batch with two bucket usage samples",
+      "evidence": "synthetic-document-derived",
+      "expected": {
+        "count": 2
+      }
+    },
+    {
+      "file": "replication-group.json",
+      "mapping_id": "MAP-REPLICATION-001",
+      "scenario": "replication group with pending data",
+      "evidence": "synthetic-document-derived",
+      "expected": {
+        "pending_bytes": 1572864
+      }
+    },
+    {
+      "file": "rg-link.json",
+      "mapping_id": "MAP-RECOVERY-001",
+      "scenario": "healthy link with bootstrap progress",
+      "evidence": "synthetic-document-derived",
+      "expected": {
+        "replication_status": 1,
+        "bootstrap_progress_ratio": 0.25
+      }
+    },
+    {
+      "file": "flux-node-resources.json",
+      "mapping_id": "MAP-NODE-RESOURCE-001",
+      "scenario": "last CPU memory and network values with columnar decoding",
+      "evidence": "synthetic-document-derived",
+      "expected": {
+        "cpu_usage_ratio": 0.275,
+        "memory_used_bytes": 8589934592,
+        "memory_total_bytes": 17179869184,
+        "network_receive_bytes_total": 123456789,
+        "network_transmit_bytes_total": 98765432,
+        "interface": "public"
+      }
+    },
+    {
+      "file": "flux-node-cpu.json",
+      "mapping_id": "MAP-NODE-RESOURCE-001",
+      "scenario": "CPU total series after an ECS-safe keep query",
+      "evidence": "synthetic-document-derived",
+      "expected": {
+        "cpu_usage_ratio": 0.275
+      }
+    },
+    {
+      "file": "flux-node-memory.json",
+      "mapping_id": "MAP-NODE-RESOURCE-001",
+      "scenario": "memory series after an ECS-safe keep query",
+      "evidence": "synthetic-document-derived",
+      "expected": {
+        "memory_used_bytes": 8589934592,
+        "memory_total_bytes": 17179869184
+      }
+    },
+    {
+      "file": "flux-node-network.json",
+      "mapping_id": "MAP-NODE-RESOURCE-001",
+      "scenario": "network series preserving the interface dimension",
+      "evidence": "synthetic-document-derived",
+      "expected": {
+        "network_receive_bytes_total": 123456789,
+        "network_transmit_bytes_total": 98765432,
+        "interface": "public"
+      }
+    },
+    {
+      "file": "flux-node-disk.json",
+      "mapping_id": "MAP-NODE-DISK-001",
+      "scenario": "allowlisted filesystem series after an ECS-safe keep query",
+      "evidence": "synthetic-document-derived",
+      "expected": {
+        "filesystem": "/data",
+        "disk_used_bytes": 4294967296,
+        "disk_total_bytes": 8589934592
+      }
+    },
+    {
+      "file": "flux-vdc-performance.json",
+      "mapping_id": "MAP-VDC-PERFORMANCE-001",
+      "scenario": "official VDC core and latency shapes plus namespace request rates",
+      "evidence": "synthetic-document-derived",
+      "expected": {
+        "count": 12
+      }
+    },
+    {
+      "file": "flux-vdc-core-performance.json",
+      "mapping_id": "MAP-VDC-PERFORMANCE-001",
+      "scenario": "VDC throughput transaction and error rates without fabricated tags",
+      "evidence": "synthetic-document-derived",
+      "expected": {
+        "mapped_count": 5,
+        "aggregate_failed_transaction_omitted": true
+      }
+    },
+    {
+      "file": "flux-vdc-latency.json",
+      "mapping_id": "MAP-VDC-PERFORMANCE-001",
+      "scenario": "VDC p50 and p99 latency with ECS id dimension",
+      "evidence": "synthetic-document-derived",
+      "expected": {
+        "mapped_count": 4,
+        "read_id": "ttfb_read",
+        "write_id": "ttlb_write"
+      }
+    },
+    {
+      "file": "flux-namespace-performance.json",
+      "mapping_id": "MAP-NAMESPACE-PERFORMANCE-001",
+      "scenario": "namespace transaction and error rates with namespace dimension",
+      "evidence": "synthetic-document-derived",
+      "expected": {
+        "mapped_count": 3,
+        "aggregate_failed_transaction_omitted": true
+      }
+    },
+    {
+      "file": "nodes-mixed-version.json",
+      "mapping_id": "MAP-VERSION-001",
+      "scenario": "rolling upgrade across ECS 3.7 and 3.8.0",
+      "evidence": "synthetic-document-derived",
+      "expected": {
+        "mixed_version": true,
+        "interval_rate_disabled": true
+      }
+    },
+    {
+      "file": "nodes-unsupported-version.json",
+      "mapping_id": "MAP-VERSION-001",
+      "scenario": "unsupported ECS 3.8.2 version at the nearest upper boundary",
+      "evidence": "synthetic-document-derived",
+      "expected": {
+        "profile_selection": "reject"
+      }
+    }
+  ]
+}

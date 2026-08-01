@@ -1,0 +1,42 @@
+{
+  "Series": [
+    {
+      "Datatypes": [
+        "dateTime:RFC3339", "dateTime:RFC3339", "dateTime:RFC3339",
+        "long", "string", "string", "string", "string"
+      ],
+      "Columns": [
+        "_start",
+        "_stop",
+        "_time",
+        "_value",
+        "_field",
+        "_measurement",
+        "node_id",
+        "host"
+      ],
+      "Values": [
+        [
+          "2026-01-15T11:50:00Z",
+          "2026-01-15T12:00:00Z",
+          "2026-01-15T11:59:00Z",
+          "8589934592",
+          "used",
+          "mem",
+          "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "node-a.example.invalid"
+        ],
+        [
+          "2026-01-15T11:50:00Z",
+          "2026-01-15T12:00:00Z",
+          "2026-01-15T11:59:00Z",
+          "17179869184",
+          "total",
+          "mem",
+          "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa",
+          "node-a.example.invalid"
+        ]
+      ]
+    }
+  ]
+}

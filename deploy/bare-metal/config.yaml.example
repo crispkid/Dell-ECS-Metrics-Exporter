@@ -1,0 +1,33 @@
+server:
+  # Bind to loopback by default. Change this only when a host firewall or
+  # trusted reverse proxy controls access.
+  listenAddress: "127.0.0.1:8080"
+
+prometheus:
+  path: /metrics
+  protected: false
+
+cache:
+  staleTolerance: 15m
+  maxStale: 1h
+
+security:
+  inventoryApi:
+    enabled: true
+    authentication: token
+    tokenFile: /etc/dell-ecs-metrics-exporter/secrets/inventory-token
+    maxPageSize: 500
+
+ecs:
+  clusters:
+    - name: replace-me
+      site: replace-me
+      environment: production
+      endpoint: https://ecs-management.example.invalid
+      usernameFile: /etc/dell-ecs-metrics-exporter/secrets/username
+      passwordFile: /etc/dell-ecs-metrics-exporter/secrets/password
+      tls:
+        # false is supported for an accepted self-signed-certificate exception
+        # and emits a startup warning; true remains recommended.
+        verify: true
+        caFile: ""

@@ -1,0 +1,77 @@
+server:
+  listenAddress: ":8080"
+  tls:
+    certFile: ""
+    keyFile: ""
+
+prometheus:
+  path: /metrics
+  protected: false
+
+cache:
+  staleTolerance: 15m
+  maxStale: 1h
+
+collector:
+  defaultTimeout: 30s
+  retry:
+    maxAttempts: 3
+    initialBackoff: 1s
+    maxBackoff: 10s
+  rateLimit:
+    requestsPerSecond: 10
+    burst: 4
+  intervals:
+    cluster: 60s
+    node: 60s
+    performance: 60s
+    replication: 120s
+    recovery: 120s
+    namespace: 300s
+    bucket: 300s
+  concurrency:
+    maxConcurrentRequestsPerCluster: 4
+    bucketPageSize: 500
+  jitterRatio: 0.1
+
+security:
+  inventoryApi:
+    enabled: true
+    authentication: token
+    tokenFile: .local-secrets/inventory-token
+    proxyHeader: X-Remote-User
+    trustedProxyCIDRs: []
+    maxPageSize: 500
+
+ecs:
+  clusters:
+    - name: primary-ecs
+      site: primary-dc
+      environment: production
+      endpoint: https://ecs-management.example.invalid
+      usernameFile: .local-secrets/username
+      passwordFile: .local-secrets/password
+      tls:
+        # Recommended default. Set false only for an explicitly accepted
+        # self-signed-certificate exception; startup will emit a warning.
+        verify: true
+        caFile: ""
+      timeouts:
+        connect: 10s
+        read: 30s
+        overall: 30s
+      intervals: {}
+      # Conditional capabilities stay off until this exact ECS build is
+      # validated. Enable only names documented in README.md.
+      capabilities:
+        enabledConditional: []
+      nodeResources:
+        # Required before enabling node_disk_capacity.
+        filesystems: []
+        # Empty means accept interfaces up to maxNetworkInterfaces.
+        networkInterfaces: []
+        maxNetworkInterfaces: 16
+        preferBondInterfaces: true
+      replication:
+        groups: []
+        links: []

@@ -1,0 +1,41 @@
+[Unit]
+Description=Dell ECS Metrics Exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=ecs-exporter
+Group=ecs-exporter
+UMask=0027
+ExecStartPre=/usr/local/bin/ecs-exporter -profiles-dir=/usr/share/dell-ecs-metrics-exporter/profiles -validate-profiles
+ExecStartPre=/usr/local/bin/ecs-exporter -config=/etc/dell-ecs-metrics-exporter/config.yaml -profiles-dir=/usr/share/dell-ecs-metrics-exporter/profiles -validate-config
+ExecStart=/usr/local/bin/ecs-exporter -config=/etc/dell-ecs-metrics-exporter/config.yaml -profiles-dir=/usr/share/dell-ecs-metrics-exporter/profiles
+Restart=on-failure
+RestartSec=5s
+TimeoutStopSec=30s
+
+# The exporter is stateless and does not need filesystem write access.
+NoNewPrivileges=true
+PrivateDevices=true
+PrivateTmp=true
+ProtectClock=true
+ProtectControlGroups=true
+ProtectHome=true
+ProtectHostname=true
+ProtectKernelLogs=true
+ProtectKernelModules=true
+ProtectKernelTunables=true
+ProtectSystem=strict
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+RestrictNamespaces=true
+RestrictRealtime=true
+RestrictSUIDSGID=true
+LockPersonality=true
+MemoryDenyWriteExecute=true
+CapabilityBoundingSet=
+AmbientCapabilities=
+SystemCallArchitectures=native
+
+[Install]
+WantedBy=multi-user.target
