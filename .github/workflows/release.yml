@@ -112,7 +112,7 @@ jobs:
           ECS_CERT_EXPECTED_VERSION: "3.8.1.4"
           ECS_CERT_BASE_URL: ${{ vars.ECS_CERT_BASE_URL }}
       - name: Upload redacted evidence
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: production-ecs-certification-evidence
           path: test-results/certification/
@@ -149,7 +149,7 @@ jobs:
           ECS_CERT_BASE_URL: ${{ vars.ECS_CE_BASE_URL }}
           ECS_CERT_ALLOW_DEGRADED: "true"
       - name: Upload redacted CE evidence
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: test-ecs-ce-compatibility-evidence
           path: test-results/certification/
@@ -186,7 +186,7 @@ jobs:
           ECS_E2E_EXPECTED_ECS_VERSION: "3.8.1.4"
           ECS_E2E_EXPECTED_COMMIT: ${{ github.sha }}
       - name: Upload redacted E2E evidence
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: deployed-e2e-evidence
           path: test-results/e2e/
@@ -218,7 +218,7 @@ jobs:
           ECS_PERF_PID_FILE: ${{ vars.ECS_PERF_PID_FILE }}
           ECS_PERF_EXPECTED_COMMIT: ${{ github.sha }}
       - name: Upload redacted performance evidence
-        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: deployed-performance-evidence
           path: test-results/performance/deployed.json
