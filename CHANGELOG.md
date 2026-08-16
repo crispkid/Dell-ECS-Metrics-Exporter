@@ -18,9 +18,9 @@ approved.
 - A transparent machine-readable stable validation record that preserves the
   limits of the user-attested appliance testing without inventing exact builds
   or replayable reports.
-- A signed private-repository attestation boundary asset when GitHub-native
-  artifact attestations are unavailable; checksums, SBOMs, BuildKit OCI
-  provenance and keyless OCI signatures remain mandatory.
+- GitHub-native provenance and SBOM attestations for the public release;
+  checksums, SBOMs, BuildKit OCI provenance and keyless OCI signatures remain
+  mandatory. Private repositories retain a signed boundary fallback.
 
 ### Changed
 

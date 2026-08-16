@@ -10,9 +10,10 @@ ECS API。
 
 目前版本為
 [`v1.0.0`](https://github.com/crispkid/Dell-ECS-Metrics-Exporter/releases/tag/v1.0.0)
-正式版本。Repository、Release、Container Image 與 Helm Chart 目前皆為 Private，必須
-使用具有存取權限的 GitHub 帳號。此版本依使用者完成的 ECS 3.8.0.x／3.8.1.x 實機相容性
-測試，以及自動化測試、安全掃描、建置與供應鏈 Gate 發布；各版本已知限制仍依下表處理。
+正式版本。GitHub Repository 與 Release 目前為 Public；Container Image 與 Helm Chart
+若因 GHCR 權限要求驗證，再使用具有 `read:packages` 權限的 GitHub 帳號登入。此版本依
+使用者完成的 ECS 3.8.0.x／3.8.1.x 實機相容性測試，以及自動化測試、安全掃描、建置與
+供應鏈 Gate 發布；各版本已知限制仍依下表處理。
 
 本專案採用 Apache License 2.0，詳見 [LICENSE](LICENSE)。
 
@@ -330,11 +331,10 @@ cd dell-ecs-metrics-exporter_1.0.0_linux_amd64
 
 ### 方式二：Docker
 
-目前 Image 為 Private，請先從 GitHub Release 下載 `image-digest.txt`，再登入 GHCR。
-此檔案記錄本次發布的不可變 Image Digest：
+先從 GitHub Release 下載 `image-digest.txt`。此檔案記錄本次發布的不可變 Image
+Digest；若 GHCR 回覆未授權，先執行 `docker login ghcr.io` 再重試：
 
 ```bash
-docker login ghcr.io
 IMAGE_REFERENCE="$(tr -d '\r\n' < image-digest.txt)"
 docker pull "$IMAGE_REFERENCE"
 ```
