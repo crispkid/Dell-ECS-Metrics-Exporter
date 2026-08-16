@@ -9,8 +9,8 @@
 |---|---|---|
 | `ecs-3.6` | `>=3.6.0.0, <3.7.0.0` | 共用功能 `validated-shared`；保留 3.6 interval/native 與 Dashboard 差異 |
 | `ecs-3.7` | `>=3.7.0.0, <3.8.0.0` | 共用功能 `validated-shared`；interval rate 依已知問題維持 unavailable |
-| `ecs-3.8.0` | `>=3.8.0.0, <3.8.1.0` | 共用功能 `validated-shared`；Host Header 與 interval policy 仍版本別處理 |
-| `ecs-3.8.1` | `>=3.8.1.0, <3.8.2.0` | 共用功能 `validated-shared`；interval rate 仍 conditional |
+| `ecs-3.8.0` | `>=3.8.0.0, <3.8.1.0` | 共用功能 `validated-shared`；使用者確認實機相容性測試通過，Host Header 與 interval policy 仍版本別處理 |
+| `ecs-3.8.1` | `>=3.8.1.0, <3.8.2.0` | 共用功能 `validated-shared`；使用者確認實機相容性測試通過，interval rate 仍 conditional |
 
 功能驗證採 `shared-live-any-target-version`：同一 production path 功能只要在任一
 目標版本取得真實 CE/appliance evidence，就列入四個 Profile 的
@@ -20,6 +20,9 @@
 contract test 使用的官方文件可辨識版本清單，不保證列出每個歷史 patch，也不表示
 該 build 已通過 Exporter 測試。`tested_builds` 只記 exact-build 執行紀錄，並不是
 共用功能驗證的必要條件；目前所有 Profile 仍為空。
+使用者已回報實體 ECS 3.8.0.x 與 3.8.1.x 的 Exporter 相容性測試通過；因尚未提供
+完整四段版本與可封存的去識別化報告，此回報不會自行轉換成 `tested_builds` 或
+`sandbox_certified`。
 ECS CE 3.8.0.3 的部分 Management API evidence 未涵蓋 REST ZIP、正式版 Flux、
 replication 與完整故障注入，因此不足以加入 `tested_builds`。
 `testdata/ecs/ecs-3.8.0.3-live/` 的 redacted partial-live fixtures

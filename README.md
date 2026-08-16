@@ -178,8 +178,8 @@ Exporter 會在啟動時讀取 ECS 完整版本，並依下表選擇 Profile。�
 |---|---|---|---|
 | `ecs-3.6` | `3.6.0.0` 以上、未滿 `3.7.0.0` | ECS CE `3.6.2.0` 已驗證 Management、Bucket、Quota、Billing、Inventory 與對應 Metrics | CE 的 Node Resources 與 Performance Flux API 回 HTTP 503 |
 | `ecs-3.7` | `3.7.0.0` 以上、未滿 `3.8.0.0` | ECS CE `3.7.0.0` 已驗證 Management、Bucket、Quota、Billing、Inventory 與對應 Metrics | CE 的 Node Resources Flux API 回 HTTP 503 |
-| `ecs-3.8.0` | `3.8.0.0` 以上、未滿 `3.8.1.0` | ECS CE `3.8.0.3` 已驗證 Management、Bucket、Quota、Billing、Inventory 與對應 Metrics | CE 的 Node Resources Flux API 回 HTTP 503 |
-| `ecs-3.8.1` | `3.8.1.0` 以上、未滿 `3.8.2.0` | ECS CE `3.8.1.4` 已驗證 Management 類資料；實體 ECS `3.8.1.1` 已驗證 Node CPU、記憶體、網路與部分 Performance 資料 | ECS `3.8.1.4` 實體設備完整認證仍待完成 |
+| `ecs-3.8.0` | `3.8.0.0` 以上、未滿 `3.8.1.0` | ECS CE `3.8.0.3` 已驗證 Management、Bucket、Quota、Billing、Inventory 與對應 Metrics；使用者另確認實體 ECS `3.8.0.x` 相容性測試通過 | Dell 已知的 Flux 時間範圍問題仍適用，因此停用 interval-derived rate；實機 exact build 與去識別化報告尚未納入 Repository |
+| `ecs-3.8.1` | `3.8.1.0` 以上、未滿 `3.8.2.0` | ECS CE `3.8.1.4` 已驗證 Management 類資料；實體 ECS `3.8.1.1` 已驗證 Node CPU、記憶體、網路與部分 Performance 資料；使用者另確認實體 ECS `3.8.1.x` 相容性測試通過 | 實機 exact build 與去識別化報告尚未納入 Repository；interval-derived rate 仍須通過環境別條件檢查 |
 
 ### Profile 自動選擇與安裝內容
 
@@ -216,6 +216,11 @@ Profile 自動選擇不代表所有選用功能都會自動開啟。`vdc_perform
 本專案採用共用功能驗證原則：同一個 API 功能只要在任一目標版本以正式程式路徑完成真實
 驗證，就視為四個 Profile 的共用功能已驗證；版本特有的差異仍由各 Profile 分別處理。
 這項原則不代表每個 ECS Build 都已完成實機認證。
+
+上表的「使用者確認」是依使用者提供的實機測試結果更新，不等同 GitHub Release
+Workflow 所產生的可重現 exact-build 證據。在完整四段 ECS 版本與去識別化測試報告納入
+受控驗證流程前，Profile 的 `version.tested_builds` 仍保持空白，也不會標示為完整
+Profile 認證。
 
 ECS Community Edition（CE）不一定提供可用的 Flux External Query。CE 回 HTTP 503 時，
 Management 類 Metrics 仍可使用，但 CPU、記憶體、網路或 Performance Metrics 可能缺席，
@@ -316,7 +321,7 @@ cd dell-ecs-metrics-exporter_1.0.0-rc.1_linux_amd64
 ./ecs-exporter -config config.yaml -profiles-dir profiles
 ```
 
-若要從原始碼建置，需先安裝 Go 1.26.5，再於 Repository 根目錄執行：
+若要從原始碼建置，需先安裝 Go 1.26.6，再於 Repository 根目錄執行：
 
 ```bash
 ./scripts/build.sh

@@ -7,6 +7,16 @@ approved.
 
 ## Unreleased
 
+### Changed
+
+- Record the user-confirmed physical ECS 3.8.0.x and 3.8.1.x
+  compatibility test status. Exact four-part builds and redacted reports remain
+  required before these runs can be represented as machine-verifiable
+  `tested_builds` or formal Profile certification.
+- Update the pinned build toolchain and Docker builder to Go 1.26.6, which
+  contains the standard-library fixes required by the release vulnerability
+  gate.
+
 ## [1.0.0-rc.1] - 2026-08-01
 
 ### Added

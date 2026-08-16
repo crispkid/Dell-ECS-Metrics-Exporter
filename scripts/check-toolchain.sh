@@ -6,7 +6,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 # shellcheck source=go-env.sh
 source "$SCRIPT_DIR/go-env.sh"
 
-expected_go="go1.26.5"
+expected_go="go1.26.6"
 actual_go="$(go env GOVERSION)"
 if [[ "$actual_go" != "$expected_go" ]]; then
   printf 'error: Go version is %s, expected %s\n' "$actual_go" "$expected_go" >&2
