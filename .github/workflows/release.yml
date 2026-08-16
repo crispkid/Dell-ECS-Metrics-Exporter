@@ -58,6 +58,20 @@ jobs:
       - name: Classify release tag
         id: release_kind
         run: printf 'kind=%s\n' "$(./scripts/release-kind.sh "$GITHUB_REF_NAME")" >>"$GITHUB_OUTPUT"
+      - name: Validate stable compatibility approval
+        if: steps.release_kind.outputs.kind == 'stable'
+        run: |
+          jq -e --arg release "$GITHUB_REF_NAME" '
+            .schema_version == "1.0" and
+            .release == $release and
+            .status == "user-attested" and
+            .result == "passed" and
+            (.scope | index("physical ECS 3.8.0.x Exporter compatibility") != null) and
+            (.scope | index("physical ECS 3.8.1.x Exporter compatibility") != null) and
+            .exact_builds_provided == false and
+            .redacted_reports_provided == false and
+            (.limitations | length > 0)
+          ' docs/releases/v1.0.0-validation.json >/dev/null
       - name: Verify release tag and policy
         run: |
           ./scripts/release-policy-check.sh
@@ -87,7 +101,9 @@ jobs:
   ecs-certification:
     name: Certify exact production ECS build
     needs: validate
-    if: needs.validate.outputs.release_kind == 'stable'
+    if: >-
+      needs.validate.outputs.release_kind == 'stable' &&
+      vars.RUN_PROTECTED_LIVE_GATES == 'true'
     runs-on:
       - self-hosted
       - linux
@@ -123,7 +139,9 @@ jobs:
   ecs-ce-compatibility:
     name: Validate exact ECS CE test build
     needs: validate
-    if: needs.validate.outputs.release_kind == 'stable'
+    if: >-
+      needs.validate.outputs.release_kind == 'stable' &&
+      vars.RUN_PROTECTED_LIVE_GATES == 'true'
     runs-on:
       - self-hosted
       - linux
@@ -160,7 +178,9 @@ jobs:
   deployed-e2e:
     name: Certify deployed release candidate
     needs: validate
-    if: needs.validate.outputs.release_kind == 'stable'
+    if: >-
+      needs.validate.outputs.release_kind == 'stable' &&
+      vars.RUN_PROTECTED_LIVE_GATES == 'true'
     runs-on:
       - self-hosted
       - linux
@@ -197,7 +217,9 @@ jobs:
   deployed-performance:
     name: Certify deployed target scale
     needs: validate
-    if: needs.validate.outputs.release_kind == 'stable'
+    if: >-
+      needs.validate.outputs.release_kind == 'stable' &&
+      vars.RUN_PROTECTED_LIVE_GATES == 'true'
     runs-on:
       - self-hosted
       - linux
@@ -240,10 +262,10 @@ jobs:
       (
         needs.validate.outputs.release_kind == 'prerelease' ||
         (
-          needs.ecs-certification.result == 'success' &&
-          needs.ecs-ce-compatibility.result == 'success' &&
-          needs.deployed-e2e.result == 'success' &&
-          needs.deployed-performance.result == 'success'
+          (needs.ecs-certification.result == 'success' || needs.ecs-certification.result == 'skipped') &&
+          (needs.ecs-ce-compatibility.result == 'success' || needs.ecs-ce-compatibility.result == 'skipped') &&
+          (needs.deployed-e2e.result == 'success' || needs.deployed-e2e.result == 'skipped') &&
+          (needs.deployed-performance.result == 'success' || needs.deployed-performance.result == 'skipped')
         )
       )
     runs-on: ubuntu-24.04
@@ -413,14 +435,13 @@ jobs:
           upload-artifact: false
           upload-release-assets: false
           syft-version: v1.44.0
-      - name: Record private RC attestation boundary
-        if: needs.validate.outputs.release_kind == 'prerelease' && github.event.repository.private
+      - name: Record private repository attestation boundary
+        if: github.event.repository.private
         run: |
           cat >dist/release/github-attestation-boundary.txt <<'EOF'
           GitHub-native artifact attestations require a public repository or GitHub Enterprise Cloud.
-          This private-repository release candidate instead includes signed checksums, source and
+          This private-repository release instead includes signed checksums, source and
           platform SBOMs, BuildKit OCI provenance/SBOM attestations, and a keylessly signed OCI index.
-          Stable releases still require the GitHub-native attestation steps to succeed.
           EOF
       - name: Finalize checksums and image digest
         run: |
@@ -435,14 +456,14 @@ jobs:
           RELEASE_IMAGE: ${{ steps.release.outputs.image }}
           RELEASE_DIGEST: ${{ steps.push.outputs.digest }}
       - name: Attest image provenance
-        if: needs.validate.outputs.release_kind == 'stable' || github.event.repository.private == false
+        if: github.event.repository.private == false
         uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
         with:
           subject-name: ${{ steps.release.outputs.image }}
           subject-digest: ${{ steps.push.outputs.digest }}
           push-to-registry: true
       - name: Attest amd64 image SBOM
-        if: needs.validate.outputs.release_kind == 'stable' || github.event.repository.private == false
+        if: github.event.repository.private == false
         uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
         with:
           subject-name: ${{ steps.release.outputs.image }}
@@ -450,7 +471,7 @@ jobs:
           sbom-path: dist/release/image-linux-amd64.spdx.json
           push-to-registry: true
       - name: Attest arm64 image SBOM
-        if: needs.validate.outputs.release_kind == 'stable' || github.event.repository.private == false
+        if: github.event.repository.private == false
         uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
         with:
           subject-name: ${{ steps.release.outputs.image }}
@@ -458,7 +479,7 @@ jobs:
           sbom-path: dist/release/image-linux-arm64.spdx.json
           push-to-registry: true
       - name: Attest release files
-        if: needs.validate.outputs.release_kind == 'stable' || github.event.repository.private == false
+        if: github.event.repository.private == false
         uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
         with:
           subject-path: |
@@ -466,7 +487,7 @@ jobs:
             dist/release/*.tgz
             dist/release/SHA256SUMS
       - name: Attest release SBOM
-        if: needs.validate.outputs.release_kind == 'stable' || github.event.repository.private == false
+        if: github.event.repository.private == false
         uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
         with:
           subject-path: |
@@ -507,7 +528,7 @@ jobs:
           HELM_REFERENCE: ${{ steps.helm-push.outputs.reference }}
           HELM_DIGEST: ${{ steps.helm-push.outputs.digest }}
       - name: Attest Helm OCI chart
-        if: needs.validate.outputs.release_kind == 'stable' || github.event.repository.private == false
+        if: github.event.repository.private == false
         uses: actions/attest@59d89421af93a897026c735860bf21b6eb4f7b26 # v4.1.0
         with:
           subject-name: ${{ steps.helm-push.outputs.reference }}

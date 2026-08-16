@@ -9,10 +9,10 @@ Exporter 只會讀取 ECS API，不會建立、修改或刪除 ECS 上的資料�
 ECS API。
 
 目前版本為
-[`v1.0.0-rc.1`](https://github.com/crispkid/Dell-ECS-Metrics-Exporter/releases/tag/v1.0.0-rc.1)
-Release Candidate（RC，候選版本）。Repository、Release、Container Image 與 Helm Chart
-目前皆為 Private，必須使用具有存取權限的 GitHub 帳號。RC 可用於功能評估與整合測試，
-但不代表所有 ECS 實體設備都已完成正式認證。
+[`v1.0.0`](https://github.com/crispkid/Dell-ECS-Metrics-Exporter/releases/tag/v1.0.0)
+正式版本。Repository、Release、Container Image 與 Helm Chart 目前皆為 Private，必須
+使用具有存取權限的 GitHub 帳號。此版本依使用者完成的 ECS 3.8.0.x／3.8.1.x 實機相容性
+測試，以及自動化測試、安全掃描、建置與供應鏈 Gate 發布；各版本已知限制仍依下表處理。
 
 本專案採用 Apache License 2.0，詳見 [LICENSE](LICENSE)。
 
@@ -187,7 +187,7 @@ Exporter 會在啟動時讀取 ECS 完整版本，並依下表選擇 Profile。�
 `/vdc/nodes` 讀取完整版本，再自動選擇上表對應的 Profile。若同一套 ECS 回傳無法相容的
 混合版本，或版本不在支援範圍內，該 Cluster 會停止收集，不會套用鄰近版本繼續執行。
 
-`v1.0.0-rc.1` 的正式安裝產物已包含完整的 Runtime Profiles：
+`v1.0.0` 的正式安裝產物已包含完整的 Runtime Profiles：
 
 ```text
 profiles/
@@ -298,12 +298,12 @@ ecs:
 ### 方式一：Release Binary
 
 從
-[`v1.0.0-rc.1` Release](https://github.com/crispkid/Dell-ECS-Metrics-Exporter/releases/tag/v1.0.0-rc.1)
+[`v1.0.0` Release](https://github.com/crispkid/Dell-ECS-Metrics-Exporter/releases/tag/v1.0.0)
 下載符合作業系統與 CPU 架構的檔案，並核對 Release 頁面顯示的 SHA-256 Digest。
 
 ```bash
-tar -xzf dell-ecs-metrics-exporter_1.0.0-rc.1_linux_amd64.tar.gz
-cd dell-ecs-metrics-exporter_1.0.0-rc.1_linux_amd64
+tar -xzf dell-ecs-metrics-exporter_1.0.0_linux_amd64.tar.gz
+cd dell-ecs-metrics-exporter_1.0.0_linux_amd64
 ```
 
 將前一節建立的 `config.yaml` 與 `.local-secrets` 放在目前目錄，再驗證設定：
@@ -390,7 +390,7 @@ kubectl -n monitoring create secret generic ecs-exporter-credentials \
 ```bash
 helm registry login ghcr.io
 helm pull oci://ghcr.io/crispkid/charts/dell-ecs-metrics-exporter \
-  --version 1.0.0-rc.1 \
+  --version 1.0.0 \
   --untar \
   --untardir /tmp/ecs-exporter-chart
 ```

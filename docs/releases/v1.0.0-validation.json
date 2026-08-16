@@ -1,0 +1,18 @@
+{
+  "schema_version": "1.0",
+  "release": "v1.0.0",
+  "status": "user-attested",
+  "confirmed_on": "2026-08-16",
+  "result": "passed",
+  "scope": [
+    "physical ECS 3.8.0.x Exporter compatibility",
+    "physical ECS 3.8.1.x Exporter compatibility"
+  ],
+  "exact_builds_provided": false,
+  "redacted_reports_provided": false,
+  "limitations": [
+    "The attestation does not identify exact four-part ECS builds.",
+    "The attestation is not a machine-replayable test report.",
+    "Version-specific known issues and conditional capabilities remain in force."
+  ]
+}

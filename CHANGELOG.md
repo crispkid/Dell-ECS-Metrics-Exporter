@@ -7,6 +7,21 @@ approved.
 
 ## Unreleased
 
+## [1.0.0] - 2026-08-16
+
+### Added
+
+- First stable Dell ECS Metrics Exporter release, approved from the
+  user-confirmed physical ECS 3.8.0.x and 3.8.1.x compatibility tests plus the
+  automated deterministic, race, container, deployment, synthetic scale,
+  vulnerability, license, image scan, signing and release artifact gates.
+- A transparent machine-readable stable validation record that preserves the
+  limits of the user-attested appliance testing without inventing exact builds
+  or replayable reports.
+- A signed private-repository attestation boundary asset when GitHub-native
+  artifact attestations are unavailable; checksums, SBOMs, BuildKit OCI
+  provenance and keyless OCI signatures remain mandatory.
+
 ### Changed
 
 - Record the user-confirmed physical ECS 3.8.0.x and 3.8.1.x

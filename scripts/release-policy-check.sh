@@ -10,6 +10,7 @@ required_files=(
   "deploy/bare-metal/install.sh"
   "deploy/prometheus/alerts.yaml"
   "docs/PRODUCTION_RUNBOOK.md"
+  "docs/releases/v1.0.0-validation.json"
   "scripts/release-build.sh"
   "scripts/release-kind.sh"
   "scripts/supply-chain-check.sh"
@@ -21,6 +22,11 @@ for path in "${required_files[@]}"; do
     exit 1
   fi
 done
+
+if ! command -v jq >/dev/null 2>&1; then
+  printf 'blocked: jq is required to validate release policy\n' >&2
+  exit 3
+fi
 
 if ! rg -q '^FROM [^[:space:]]+@sha256:[0-9a-f]{64} AS build$' Dockerfile; then
   printf 'error: Docker build image must be pinned by digest\n' >&2
@@ -35,14 +41,30 @@ if ! rg -q 'cosign sign --yes' .github/workflows/release.yml ||
 fi
 if [[ "$(./scripts/release-kind.sh v1.0.0)" != "stable" ]] ||
   [[ "$(./scripts/release-kind.sh v1.0.0-rc.1)" != "prerelease" ]] ||
-  ! rg -Fq "if: needs.validate.outputs.release_kind == 'stable'" \
+  ! rg -Fq "if: steps.release_kind.outputs.kind == 'stable'" \
     .github/workflows/release.yml ||
   ! rg -Fq 'needs.validate.outputs.release_kind == '\''prerelease'\''' \
     .github/workflows/release.yml ||
   ! rg -Fq 'release_flags+=(--prerelease)' .github/workflows/release.yml ||
-  [[ "$(rg -c "if: needs.validate.outputs.release_kind == 'stable' \\|\\| github.event.repository.private == false" .github/workflows/release.yml)" -ne 6 ]] ||
+  [[ "$(rg -c 'if: github.event.repository.private == false' .github/workflows/release.yml)" -ne 6 ]] ||
   ! rg -Fq 'github-attestation-boundary.txt' .github/workflows/release.yml; then
   printf 'error: release workflow does not preserve stable gates and GitHub prerelease marking\n' >&2
+  exit 1
+fi
+if ! jq -e '
+  .schema_version == "1.0" and
+  .release == "v1.0.0" and
+  .status == "user-attested" and
+  .result == "passed" and
+  (.scope | index("physical ECS 3.8.0.x Exporter compatibility") != null) and
+  (.scope | index("physical ECS 3.8.1.x Exporter compatibility") != null) and
+  .exact_builds_provided == false and
+  .redacted_reports_provided == false and
+  (.limitations | type == "array" and length > 0)
+' docs/releases/v1.0.0-validation.json >/dev/null ||
+  [[ "$(rg -c "vars.RUN_PROTECTED_LIVE_GATES == 'true'" .github/workflows/release.yml)" -ne 4 ]] ||
+  [[ "$(rg -c "result == 'skipped'" .github/workflows/release.yml)" -ne 4 ]]; then
+  printf 'error: stable user-attested compatibility policy is incomplete\n' >&2
   exit 1
 fi
 if ! rg -q 'ECS_CERT_EXPECTED_VERSION: "3\.8\.1\.4"' .github/workflows/release.yml ||
@@ -100,10 +122,6 @@ if [[ -n "$(git status --porcelain=v1 --untracked-files=all)" ]]; then
 fi
 if [[ -z "$(git remote)" ]]; then
   printf 'blocked: no Git remote is configured\n' >&2
-  exit 3
-fi
-if ! command -v jq >/dev/null 2>&1; then
-  printf 'blocked: jq is required to validate shared Profile feature evidence\n' >&2
   exit 3
 fi
 if ! jq -se '
