@@ -32,6 +32,12 @@ approved.
   contains the standard-library fixes required by the release vulnerability
   gate.
 
+### Fixed
+
+- Upgrade the indirect `golang.org/x/mod` tool dependency to v0.40.0 after the
+  stable release dependency scan identified GO-2026-6179 and GO-2026-6180 in
+  v0.38.0.
+
 ## [1.0.0-rc.1] - 2026-08-01
 
 ### Added
